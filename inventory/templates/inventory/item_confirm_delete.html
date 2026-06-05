@@ -1,0 +1,46 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}Delete Item{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 60vh;">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
+            <div class="card-header bg-danger text-white py-3">
+                <h5 class="mb-0 text-center fw-bold">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirm Deletion
+                </h5>
+            </div>
+            <div class="card-body p-4 text-center">
+                <div class="mb-4">
+                    <i class="bi bi-trash3 text-danger" style="font-size: 5rem; opacity: 0.8;"></i>
+                </div>
+                
+                <h5 class="fw-bold mb-3">Are you absolutely sure?</h5>
+                
+                <div class="bg-light rounded-3 p-3 mb-4 text-start">
+                    <h6 class="fw-bold text-dark mb-1">{{ item.name }}</h6>
+                    <ul class="list-unstyled mb-0 small text-muted">
+                        <li><i class="bi bi-geo-alt me-1"></i> Location: {{ item.location }}</li>
+                        <li><i class="bi bi-tag me-1"></i> Status: {{ item.get_status_display }}</li>
+                    </ul>
+                </div>
+                
+                <p class="text-danger small fw-semibold mb-4">
+                    <i class="bi bi-info-circle me-1"></i> This action cannot be undone.
+                </p>
+                
+                <form method="post" class="d-flex gap-2 justify-content-center">
+                    {% csrf_token %}
+                    <a href="{% url 'item_list' %}" class="btn btn-light px-4 border">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash"></i> Yes, Delete Item
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

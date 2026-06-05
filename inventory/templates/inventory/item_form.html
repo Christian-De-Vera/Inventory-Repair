@@ -1,0 +1,571 @@
+{% extends 'inventory/base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<style>
+    /* Style for select dropdowns */
+    select[name="location"], select[name="category"], select[name="person_accountable"] {
+        background-color: #fff;
+    }
+    
+    /* Quick add button styling */
+    .input-group .btn-outline-secondary {
+        border-left: none;
+    }
+    
+    .input-group .btn-outline-secondary:hover {
+        background-color: #f8f9fa;
+        border-color: #ced4da;
+    }
+</style>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h4 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-{% if 'Add' in title %}plus-circle{% else %}pencil-square{% endif %} me-2"></i>
+                    {{ title }}
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate id="itemForm">
+                    {% csrf_token %}
+                    
+                    <!-- Quantity Info Banner (only for Add mode) -->
+                    {% if 'Add' in title %}
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        <strong>Bulk Add Feature:</strong> Set quantity to more than 1 to create multiple identical items at once. Each item will get its own unique code.
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row g-3">
+                        {% for field in form %}
+                        <div class="col-md-{% if field.name == 'description' or field.name == 'image' %}12{% elif field.name == 'quantity' %}12{% else %}6{% endif %} mb-2">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold text-dark">
+                                {{ field.label }}
+                                {% if field.field.required %}
+                                    <span class="text-danger">*</span>
+                                {% endif %}
+                            </label>
+                            
+                            <!-- Special styling for specific fields -->
+                            {% if field.name == 'quantity' %}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-hash text-primary"></i>
+                                    </span>
+                                    {{ field }}
+                                </div>
+                                <div class="form-text text-muted mt-2">
+                                    <i class="bi bi-plus-circle"></i> Enter a number greater than 1 to create multiple copies of this item.
+                                </div>
+                            {% elif field.name == 'image' %}
+                                <div class="d-flex gap-3 align-items-start mb-3 p-3 border rounded-3 bg-light">
+                                    {% if item and item.image %}
+                                        <div class="text-center">
+                                            <span class="d-block small text-muted mb-1">Current</span>
+                                            <img src="{{ item.image.url }}" alt="{{ item.name }}" class="rounded shadow-sm" style="width: 80px; height: 80px; object-fit: cover;">
+                                        </div>
+                                    {% endif %}
+                                    <div class="flex-grow-1">
+                                        {{ field }}
+                                        <div class="form-text text-muted mt-2">
+                                            <i class="bi bi-info-circle"></i> Upload a clear image of the item. Max size: 5MB.
+                                        </div>
+                                        <img id="imagePreview" src="#" alt="Preview" class="rounded shadow-sm mt-2 d-none" style="width: 80px; height: 80px; object-fit: cover;">
+                                    </div>
+                                </div>
+                            {% elif field.name == 'serial_no' %}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-upc-scan text-primary"></i>
+                                    </span>
+                                    {{ field }}
+                                </div>
+                                <div class="form-text text-muted mt-2">
+                                    <i class="bi bi-info-circle"></i> Enter the item's serial number if available.
+                                </div>
+                            {% elif field.name == 'end_of_life_date' %}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-calendar-x text-warning"></i>
+                                    </span>
+                                    {{ field }}
+                                </div>
+                                <div class="form-text text-muted mt-2">
+                                    <i class="bi bi-info-circle"></i> Select the date when this item should be retired or replaced.
+                                </div>
+                                <div id="eolWarning" class="alert alert-warning mt-2 d-none">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    <span id="eolWarningText"></span>
+                                </div>
+                            {% elif field.name == 'acquisition_date' %}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0">
+                                        <i class="bi bi-calendar-check text-success"></i>
+                                    </span>
+                                    {{ field }}
+                                </div>
+                            {% elif field.name == 'category' %}
+                                <div class="input-group">
+                                    {{ field }}
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addCategoryModal" title="Add New Category">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            {% elif field.name == 'location' %}
+                                <div class="input-group">
+                                    {{ field }}
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addLocationModal" title="Add New Location">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            {% elif field.name == 'person_accountable' %}
+                                <div class="input-group">
+                                    {{ field }}
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addPersonModal" title="Add New Person">
+                                        <i class="bi bi-plus-lg"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                {{ field }}
+                            {% endif %}
+                            
+                            {% if field.errors %}
+                                <div class="text-danger mt-1 small fw-medium">
+                                    {% for error in field.errors %}
+                                        <div><i class="bi bi-exclamation-circle me-1"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            
+                            {% if field.help_text and field.name != 'image' and field.name != 'quantity' and field.name != 'serial_no' %}
+                                <div class="form-text small">{{ field.help_text }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'item_list' %}" class="btn btn-light border px-4">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success px-5 shadow-sm">
+                            <i class="bi bi-check2-circle me-1"></i> Save Item(s)
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Category -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-folder-plus me-2"></i>Add New Category
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="categoryModalAlert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Category Name <span class="text-danger">*</span></label>
+                    <input type="text" id="newCategoryName" class="form-control" placeholder="e.g., Laptop, Monitor, Printer">
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="saveCategoryBtn">
+                    <i class="bi bi-check-circle me-1"></i> Add Category
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Location -->
+<div class="modal fade" id="addLocationModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-geo-alt-plus me-2"></i>Add New Location
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="locationModalAlert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Location Name <span class="text-danger">*</span></label>
+                    <input type="text" id="newLocationName" class="form-control" placeholder="e.g., Main Office, Warehouse A">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Description (Optional)</label>
+                    <textarea id="newLocationDescription" class="form-control" rows="2" placeholder="Additional notes about this location..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="saveLocationBtn">
+                    <i class="bi bi-check-circle me-1"></i> Add Location
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Person -->
+<div class="modal fade" id="addPersonModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-person-plus me-2"></i>Add New Person
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="personModalAlert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" id="newPersonName" class="form-control" placeholder="e.g., Juan Dela Cruz">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email (Optional)</label>
+                    <input type="email" id="newPersonEmail" class="form-control" placeholder="juan@example.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Department (Optional)</label>
+                    <input type="text" id="newPersonDepartment" class="form-control" placeholder="e.g., IT Department">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Contact Number (Optional)</label>
+                    <input type="text" id="newPersonContact" class="form-control" placeholder="e.g., 09123456789">
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="savePersonBtn">
+                    <i class="bi bi-check-circle me-1"></i> Add Person
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Add Bootstrap classes to form inputs
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.type !== 'checkbox' && input.type !== 'radio' && input.type !== 'file') {
+                input.classList.add('form-control');
+            } else if (input.type === 'checkbox') {
+                input.classList.add('form-check-input');
+            } else if (input.type === 'file') {
+                input.classList.add('form-control');
+            }
+        });
+
+        // Style select dropdowns
+        const selectInputs = document.querySelectorAll('select');
+        selectInputs.forEach(select => {
+            select.classList.add('form-select');
+        });
+
+        // Style the quantity input specifically
+        const quantityInput = document.querySelector('input[name="quantity"]');
+        if (quantityInput) {
+            quantityInput.classList.add('form-control-lg', 'text-center', 'fw-bold');
+            quantityInput.style.fontSize = '1.2rem';
+        }
+
+        // Instant Image Preview
+        const fileInput = document.querySelector('input[type="file"]');
+        const preview = document.getElementById('imagePreview');
+        
+        if (fileInput && preview) {
+            fileInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        preview.src = e.target.result;
+                        preview.classList.remove('d-none');
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    preview.src = '#';
+                    preview.classList.add('d-none');
+                }
+            });
+        }
+
+        // End of Life Date validation and warnings
+            const eolDateInput = document.querySelector('input[name="end_of_life_date"]');
+            const acquisitionDateInput = document.querySelector('input[name="acquisition_date"]');
+            const eolWarning = document.getElementById('eolWarning');
+            const eolWarningText = document.getElementById('eolWarningText');
+
+            function checkEOLDate() {
+                if (eolDateInput && eolDateInput.value) {
+                    const eolDate = new Date(eolDateInput.value);
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    
+                    const daysUntilEOL = Math.ceil((eolDate - today) / (1000 * 60 * 60 * 24));
+                    
+                    if (eolDate < today) {
+                        eolWarning.classList.remove('d-none');
+                        eolWarning.classList.remove('alert-warning');
+                        eolWarning.classList.add('alert-danger');
+                        eolWarningText.innerHTML = '<strong>Expired!</strong> This item has passed its end of life date. Consider decommissioning.';
+                    } else if (daysUntilEOL <= 30) {
+                        eolWarning.classList.remove('d-none');
+                        eolWarning.classList.remove('alert-danger');
+                        eolWarning.classList.add('alert-warning');
+                        eolWarningText.innerHTML = `<strong>Warning!</strong> This item will reach its end of life in ${daysUntilEOL} days. Consider planning for replacement.`;
+                    } else {
+                        eolWarning.classList.add('d-none');
+                    }
+                } else {
+                    eolWarning.classList.add('d-none');
+                }
+            }
+
+            function validateDates() {
+                if (acquisitionDateInput && acquisitionDateInput.value && eolDateInput && eolDateInput.value) {
+                    const acquisitionDate = new Date(acquisitionDateInput.value);
+                    const eolDate = new Date(eolDateInput.value);
+                    
+                    if (eolDate < acquisitionDate) {
+                        eolWarning.classList.remove('d-none');
+                        eolWarning.classList.remove('alert-warning');
+                        eolWarning.classList.add('alert-danger');
+                        eolWarningText.innerHTML = '<strong>Error!</strong> End of Life date cannot be before Acquisition date.';
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            if (eolDateInput) {
+                eolDateInput.addEventListener('change', function() {
+                    checkEOLDate();
+                    validateDates();
+                });
+            }
+
+            if (acquisitionDateInput) {
+                acquisitionDateInput.addEventListener('change', validateDates);
+            }
+
+        // Helper function to show alert in modal
+        function showModalAlert(modalId, message, type) {
+            const alertDiv = document.querySelector(`${modalId} .modal-body .alert`);
+            const alertContainer = document.querySelector(`${modalId} #${modalId.replace('#', '')}ModalAlert`);
+            
+            // Remove existing alert
+            if (alertDiv) alertDiv.remove();
+            
+            // Create new alert
+            const newAlert = document.createElement('div');
+            newAlert.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+            newAlert.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            alertContainer.appendChild(newAlert);
+            
+            // Auto dismiss after 3 seconds
+            setTimeout(() => {
+                if (newAlert) newAlert.remove();
+            }, 3000);
+        }
+
+        // Add Category via AJAX
+        document.getElementById('saveCategoryBtn')?.addEventListener('click', function() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            
+            if (!name) {
+                showModalAlert('#addCategoryModal', 'Please enter a category name.', 'error');
+                return;
+            }
+            
+            fetch("{% url 'quick_add_category' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ name: name })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add new option to category select dropdown
+                    const categorySelect = document.querySelector('select[name="category"]');
+                    const newOption = new Option(data.name, data.id, true, true);
+                    categorySelect.appendChild(newOption);
+                    
+                    // Show success message
+                    showModalAlert('#addCategoryModal', data.message, 'success');
+                    
+                    // Close modal after short delay
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
+                        modal.hide();
+                        document.getElementById('newCategoryName').value = '';
+                        // Clear alerts
+                        const alertDiv = document.querySelector('#addCategoryModal .modal-body .alert');
+                        if (alertDiv) alertDiv.remove();
+                    }, 1500);
+                } else {
+                    showModalAlert('#addCategoryModal', data.error || 'An error occurred', 'error');
+                }
+            })
+            .catch(error => {
+                showModalAlert('#addCategoryModal', 'Network error. Please try again.', 'error');
+            });
+        });
+
+        // Add Location via AJAX
+        document.getElementById('saveLocationBtn')?.addEventListener('click', function() {
+            const name = document.getElementById('newLocationName').value.trim();
+            const description = document.getElementById('newLocationDescription').value.trim();
+            
+            if (!name) {
+                showModalAlert('#addLocationModal', 'Please enter a location name.', 'error');
+                return;
+            }
+            
+            fetch("{% url 'quick_add_location' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ name: name, description: description })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add new option to location select dropdown
+                    const locationSelect = document.querySelector('select[name="location"]');
+                    const newOption = new Option(data.name, data.id, true, true);
+                    locationSelect.appendChild(newOption);
+                    
+                    // Show success message
+                    showModalAlert('#addLocationModal', data.message, 'success');
+                    
+                    // Close modal after short delay
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addLocationModal'));
+                        modal.hide();
+                        document.getElementById('newLocationName').value = '';
+                        document.getElementById('newLocationDescription').value = '';
+                        const alertDiv = document.querySelector('#addLocationModal .modal-body .alert');
+                        if (alertDiv) alertDiv.remove();
+                    }, 1500);
+                } else {
+                    showModalAlert('#addLocationModal', data.error || 'An error occurred', 'error');
+                }
+            })
+            .catch(error => {
+                showModalAlert('#addLocationModal', 'Network error. Please try again.', 'error');
+            });
+        });
+
+        // Add Person via AJAX
+        document.getElementById('savePersonBtn')?.addEventListener('click', function() {
+            const name = document.getElementById('newPersonName').value.trim();
+            const email = document.getElementById('newPersonEmail').value.trim();
+            const department = document.getElementById('newPersonDepartment').value.trim();
+            const contact_number = document.getElementById('newPersonContact').value.trim();
+            
+            if (!name) {
+                showModalAlert('#addPersonModal', 'Please enter the person\'s name.', 'error');
+                return;
+            }
+            
+            fetch("{% url 'quick_add_person' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ 
+                    name: name, 
+                    email: email, 
+                    department: department, 
+                    contact_number: contact_number 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Add new option to person select dropdown
+                    const personSelect = document.querySelector('select[name="person_accountable"]');
+                    const newOption = new Option(data.name, data.id, true, true);
+                    personSelect.appendChild(newOption);
+                    
+                    // Show success message
+                    showModalAlert('#addPersonModal', data.message, 'success');
+                    
+                    // Close modal after short delay
+                    setTimeout(() => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('addPersonModal'));
+                        modal.hide();
+                        document.getElementById('newPersonName').value = '';
+                        document.getElementById('newPersonEmail').value = '';
+                        document.getElementById('newPersonDepartment').value = '';
+                        document.getElementById('newPersonContact').value = '';
+                        const alertDiv = document.querySelector('#addPersonModal .modal-body .alert');
+                        if (alertDiv) alertDiv.remove();
+                    }, 1500);
+                } else {
+                    showModalAlert('#addPersonModal', data.error || 'An error occurred', 'error');
+                }
+            })
+            .catch(error => {
+                showModalAlert('#addPersonModal', 'Network error. Please try again.', 'error');
+            });
+        });
+
+        // Reset modals when closed
+        const modals = ['addCategoryModal', 'addLocationModal', 'addPersonModal'];
+        modals.forEach(modalId => {
+            const modalElement = document.getElementById(modalId);
+            if (modalElement) {
+                modalElement.addEventListener('hidden.bs.modal', function() {
+                    // Clear input fields
+                    const inputs = modalElement.querySelectorAll('input, textarea');
+                    inputs.forEach(input => input.value = '');
+                    // Remove alerts
+                    const alerts = modalElement.querySelectorAll('.alert');
+                    alerts.forEach(alert => alert.remove());
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}
