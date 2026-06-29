@@ -40,21 +40,27 @@ if DATABASE_URL:
         DATABASE_URL
     )
     if match:
-        db_config = {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': match.group(5),
-            'USER': match.group(1),
-            'PASSWORD': match.group(2),
-            'HOST': match.group(3),
-            'PORT': match.group(4) or '5432',
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': match.group(5),
+                'USER': match.group(1),
+                'PASSWORD': match.group(2),
+                'HOST': match.group(3),
+                'PORT': match.group(4) or '5432',
+            }
         }
         if query_params:
-            db_config['OPTIONS'] = query_params
-        DATABASES = {'default': db_config}
+            DATABASES['default']['OPTIONS'] = query_params
     else:
         raise Exception(f"Invalid DATABASE_URL format: {DATABASE_URL}")
 else:
-    raise Exception("DATABASE_URL environment variable is not set!")
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 INSTALLED_APPS = [
     'django.contrib.admin',
