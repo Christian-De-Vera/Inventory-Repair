@@ -26,6 +26,9 @@ if DATABASE_URL:
     if DATABASE_URL.count('[') == 1 and DATABASE_URL.count(']') == 1:
         DATABASE_URL = DATABASE_URL.replace('[', '').replace(']', '')
 
+    if '?' in DATABASE_URL:
+        DATABASE_URL = DATABASE_URL.split('?')[0]
+
     match = re.match(
         r'^(?:postgresql|postgres)://([^:]+):([^@]*)@([^:/]+):?(\d+)?/(.+)$',
         DATABASE_URL
