@@ -1,10 +1,51 @@
-{% extends 'inventory/base.html' %}
+{% extends 'inventory/inventory_base.html' %}
 
 {% block title %}{{ item.name }}{% endblock %}
 
 {% block content %}
+<style>
+    .hierarchy-viz {
+        position: relative;
+        padding-left: 1rem;
+    }
+    .hierarchy-viz .node {
+        position: relative;
+        padding: 0.6rem 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.5rem;
+        border: 1px solid #dee2e6;
+        display: flex;
+        align-items: center;
+        background: white;
+        text-decoration: none;
+        color: inherit;
+    }
+    .hierarchy-viz .node:hover {
+        border-color: #0d6efd;
+        background: #f8f9fa;
+    }
+    .hierarchy-viz .node.current {
+        background: #f0f7ff;
+        border-color: #0d6efd;
+        border-width: 2px;
+    }
+    .hierarchy-viz .connector {
+        position: absolute;
+        left: -1rem;
+        top: -1.5rem;
+        bottom: 50%;
+        width: 1rem;
+        border-left: 2px solid #dee2e6;
+        border-bottom: 2px solid #dee2e6;
+        border-bottom-left-radius: 0.5rem;
+    }
+    .hierarchy-viz .children-container {
+        padding-left: 2rem;
+    }
+</style>
+
 <div class="row justify-content-center">
-    <div class="col-lg-9">
+    <div class="col-lg-10">
         
         <!-- Breadcrumb -->
         <nav aria-label="breadcrumb" class="mb-4">
@@ -13,30 +54,60 @@
                 <li class="breadcrumb-item active" aria-current="page">{{ item.name }}</li>
             </ol>
         </nav>
-        <!-- Add this right after the item name -->
-<div class="mb-3">
-    <span class="text-muted small text-uppercase">Item Code</span>
-    <div>
-        <code class="bg-light px-3 py-2 rounded" style="font-size: 1.2rem; letter-spacing: 1px;">
-            {{ item.item_code }}
-        </code>
-        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copyToClipboard('{{ item.item_code }}')" title="Copy Code">
-            <i class="bi bi-copy"></i>
-        </button>
-    </div>
-</div>
+
+        <!-- Item Code Banner -->
+        <div class="bg-light border rounded-3 p-3 mb-4 shadow-sm">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <i class="bi bi-upc-scan fs-4 text-primary me-2"></i>
+                    <span class="text-muted">Item Code:</span>
+                    <code class="bg-white px-2 py-1 rounded ms-2" style="font-size: 1.1rem; letter-spacing: 1px;">
+                        {{ item.item_code|default:"Not assigned" }}
+                    </code>
+                    {% if item.is_component %}
+                        <span class="badge bg-info text-dark ms-2 shadow-sm"><i class="bi bi-link-45deg me-1"></i>Component</span>
+                    {% endif %}
+                    {% if item.is_kit %}
+                        <span class="badge bg-primary ms-2 shadow-sm"><i class="bi bi-box-seam me-1"></i>Kit Parent</span>
+                    {% endif %}
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('{{ item.item_code }}', this)" title="Copy Code">
+                        <i class="bi bi-copy"></i> Copy
+                    </button>
+                    <a href="{% url 'download_item_qr' item.id %}" class="btn btn-sm btn-outline-primary" title="Download QR Code">
+                        <i class="bi bi-qr-code"></i> Download QR
+                    </a>
+                </div>
+            </div>
+        </div>
 
         <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-info-square me-2"></i>Item Details</h4>
                 <span class="status-badge status-{{ item.status }}">{{ item.get_status_display }}</span>
             </div>
             
             <div class="card-body p-4">
+                <!-- Permanent Relationship Notices -->
+                {% if item.is_component %}
+                <div class="d-flex align-items-center p-3 mb-4 border border-info rounded-3 bg-info bg-opacity-10">
+                    <i class="bi bi-diagram-2-fill fs-5 text-info me-3"></i>
+                    <div class="text-dark">This item belongs to kit: <a href="{% url 'item_detail' item.parent_item.id %}" class="fw-bold text-primary text-decoration-none">{{ item.parent_item.name }}</a></div>
+                </div>
+                {% endif %}
+                
+                {% if item.is_kit %}
+                <div class="d-flex align-items-center p-3 mb-4 border border-primary rounded-3 bg-primary bg-opacity-10">
+                    <i class="bi bi-box-seam-fill fs-5 text-primary me-3"></i>
+                    <div class="text-dark">This item is a <strong>Parent Kit</strong> containing {{ children.count }} sub-components.</div>
+                </div>
+                {% endif %}
+
                 <div class="row g-4">
                     <!-- Image Column -->
                     <div class="col-md-5 text-center">
-                        <div class="bg-light p-2 rounded-4 shadow-sm h-100 d-flex align-items-center justify-content-center">
+                        <div class="bg-light p-3 rounded-4 shadow-sm h-100 d-flex align-items-center justify-content-center">
                             {% if item.image %}
                                 <img src="{{ item.image.url }}" alt="{{ item.name }}" class="img-fluid rounded-3" style="max-height: 350px; object-fit: contain;">
                             {% else %}
@@ -53,11 +124,33 @@
                         <h2 class="fw-bold mb-2">{{ item.name }}</h2>
                         <p class="text-muted mb-4">{{ item.description|default:"No description provided for this item." }}</p>
                         
+                        <!-- Serial Number if exists -->
+                        {% if item.serial_no %}
+                        <div class="mb-3">
+                            <div class="p-3 border rounded-3 bg-light h-100">
+                                <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-upc-scan"></i> Serial Number</div>
+                                <div class="fw-semibold">{{ item.serial_no }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         <div class="row g-3">
                             <div class="col-sm-6">
                                 <div class="p-3 border rounded-3 bg-light h-100">
                                     <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-tag"></i> Category</div>
                                     <div class="fw-semibold">{{ item.category.name|default:"Uncategorized" }}</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-building"></i> Department</div>
+                                    <div class="fw-semibold">
+                                        {% if item.department %}
+                                            {{ item.department }}
+                                        {% else %}
+                                            <span class="text-muted">No department assigned</span>
+                                        {% endif %}
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-sm-6">
@@ -77,21 +170,6 @@
                                     </div>
                                 </div>
                             </div>
-                            <!-- Serial Number -->
-                            <div class="col-sm-6">
-                                <div class="p-3 border rounded-3 bg-light h-100">
-                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-upc-scan"></i> Serial No</div>
-                                    <div class="fw-semibold font-monospace">
-                                        {% if item.serial_no %}
-                                            {{ item.serial_no }}
-                                        {% else %}
-                                            <span class="text-muted">Not specified</span>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Person Accountable -->
                             <div class="col-sm-6">
                                 <div class="p-3 border rounded-3 bg-light h-100">
                                     <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-person-badge"></i> Person Accountable</div>
@@ -112,14 +190,14 @@
                             </div>
                             <div class="col-sm-6">
                                 <div class="p-3 border rounded-3 bg-light h-100">
-                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-calendar-check"></i> Acquisition Date</div>
-                                    <div class="fw-semibold">{{ item.acquisition_date|default:"Not set" }}</div>
+                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-hash"></i> Quantity</div>
+                                    <div class="fw-semibold">x{{ item.quantity }}</div>
                                 </div>
                             </div>
                             <div class="col-sm-6">
                                 <div class="p-3 border rounded-3 bg-light h-100">
-                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-cash-stack"></i> Cost</div>
-                                    <div class="fw-semibold text-success">₱{{ item.acquisition_cost|default:"0.00" }}</div>
+                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-calendar-check"></i> Acquisition Date</div>
+                                    <div class="fw-semibold">{{ item.acquisition_date|date:"F d, Y"|default:"Not set" }}</div>
                                 </div>
                             </div>
                             <div class="col-sm-6">
@@ -146,6 +224,18 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-cash-stack"></i> Acquisition Cost</div>
+                                    <div class="fw-semibold text-success">₱{{ item.acquisition_cost|default:"0.00" }}</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="p-3 border rounded-3 bg-light h-100">
+                                    <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-calculator"></i> Total Value</div>
+                                    <div class="fw-semibold text-success">₱{{ item.get_total_value|default:"0.00" }}</div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -155,25 +245,325 @@
                 <a href="{% url 'item_list' %}" class="btn btn-light border px-4 me-2">
                     <i class="bi bi-arrow-left me-1"></i> Back
                 </a>
+                {% if item.status != 'in_repair' and perms.repairs.add_repairticket %}
+                <button type="button" class="btn btn-outline-warning px-4 me-2" onclick="confirmAndMarkInRepair({{ item.id }})">
+                    <i class="bi bi-tools me-1"></i> Request Repair
+                </button>
+                {% endif %}
+                {% if perms.inventory.change_item %}
                 <a href="{% url 'item_edit' item.id %}" class="btn btn-primary px-4">
                     <i class="bi bi-pencil-square me-1"></i> Edit Item
                 </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Kit Management Section -->
+        {% if perms.inventory.change_item %}
+        <div class="card shadow-sm border-0 rounded-4 mt-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-box-seam me-2"></i>Kit Management
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                {% if item.parent_item %}
+                    <div class="d-flex align-items-center p-3 mb-4 border border-info rounded-3 bg-info bg-opacity-10">
+                        <i class="bi bi-info-circle-fill fs-5 text-info me-3"></i> 
+                        <div class="text-dark">
+                            <strong>Notice:</strong> This item is already a component of <a href="{% url 'item_detail' item.parent_item.id %}" class="fw-bold text-primary">{{ item.parent_item.name }}</a>.
+                        </div>
+                    </div>
+                {% endif %}
+
+                <p class="text-muted small mb-3">Build this item's kit by adding existing standalone items below.</p>
+                <form action="{% url 'add_existing_to_kit' item.id %}" method="post" class="row g-3 align-items-end">
+                    {% csrf_token %}
+                    <div class="col-md-9">
+                        <label for="child_item_id" class="form-label fw-semibold small text-muted text-uppercase">Select Item to Add</label>
+                        <select name="child_item_id" id="child_item_id" class="form-select">
+                            <option value="">-- Choose an item --</option>
+                            {% for standalone in standalone_items %}
+                                <option value="{{ standalone.id }}">{{ standalone.item_code }} - {{ standalone.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100 shadow-sm" {% if not standalone_items %}disabled{% endif %}>
+                            <i class="bi bi-plus-lg me-1"></i> Add Part
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Visual Kit Hierarchy Section -->
+        {% if ancestors or children %}
+        <div class="card shadow-sm border-0 rounded-4 mt-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold text-primary">
+                        <i class="bi bi-diagram-3 me-2"></i>Visual Hierarchy
+                    </h5>
+                    <a href="{% url 'item_hierarchy' item.id %}" class="btn btn-sm btn-outline-primary shadow-sm">
+                        <i class="bi bi-tree me-1"></i> Full Tree View
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="hierarchy-viz">
+                    {% for ancestor in ancestors %}
+                        <div class="node-container">
+                            <a href="{% url 'item_detail' ancestor.id %}" class="node opacity-75">
+                                <i class="bi bi-box-seam me-2"></i>
+                                <span>{{ ancestor.name }}</span>
+                            </a>
+                            <div class="connector"></div>
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="node-container">
+                        {% if ancestors %}<div class="connector"></div>{% endif %}
+                        <div class="node current shadow-sm">
+                            <i class="bi bi-geo-fill text-primary me-2"></i>
+                            <span><strong>{{ item.name }}</strong> (This Item)</span>
+                        </div>
+                    </div>
+
+                    {% if children %}
+                        <div class="children-container">
+                            {% for child in children %}
+                                <div class="node-container">
+                                    <div class="connector"></div>
+                                    <a href="{% url 'item_detail' child.id %}" class="node">
+                                        <i class="bi bi-component me-2 text-muted"></i>
+                                        <span>{{ child.name }}</span>
+                                        {% if child.children.exists %}
+                                            <span class="badge bg-light text-dark border ms-2">{{ child.children.count }} parts</span>
+                                        {% endif %}
+                                    </a>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Kit Components Section -->
+        {% if children %}
+        <div class="card shadow-sm border-0 rounded-4 mt-4">
+            <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-box-seam me-2"></i>Kit Components ({{ children.count }})
+                </h5>
+                {% if perms.inventory.change_item %}
+                    <form action="{% url 'break_kit' item.id %}" method="post" onsubmit="return confirm('Are you sure you want to ungroup these items? This will remove the link to this parent but keep the items in their current location.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-unindent me-1"></i> Break Kit
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Item Code</th>
+                                <th>Name</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for child in children %}
+                            <tr>
+                                <td class="ps-4"><code>{{ child.item_code }}</code></td>
+                                <td class="fw-bold">{{ child.name }}</td>
+                                <td>{{ child.location.name|default:"---" }}</td>
+                                <td><span class="status-badge status-{{ child.status }}">{{ child.get_status_display }}</span></td>
+                                <td class="text-end pe-4">
+                                    <div class="btn-group">
+                                        <a href="{% url 'item_detail' child.id %}" class="btn btn-sm btn-outline-info">View</a>
+                                        {% if perms.inventory.change_item %}
+                                            <form action="{% url 'remove_from_kit' child.id %}" method="post" class="d-inline" onsubmit="return confirm('Remove this item from the kit?');">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Custom Fields Section -->
+        {% if item.custom_values.all %}
+        <div class="card shadow-sm border-0 rounded-4 mt-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-puzzle me-2"></i>Additional Information
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    {% for custom_value in item.custom_values.all %}
+                    <div class="col-sm-6 col-md-4">
+                        <div class="p-3 border rounded-3 bg-light h-100">
+                            <div class="text-muted small text-uppercase fw-bold mb-2">
+                                <i class="bi bi-tag"></i> {{ custom_value.field.name }}
+                            </div>
+                            <div class="fw-semibold">
+                                {% if custom_value.field.field_type == 'boolean' %}
+                                    {% if custom_value.value_boolean %}
+                                        <span class="badge bg-success"><i class="bi bi-check-lg"></i> Yes</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary"><i class="bi bi-x-lg"></i> No</span>
+                                    {% endif %}
+                                {% elif custom_value.field.field_type == 'url' %}
+                                    <a href="{{ custom_value.value_text }}" target="_blank" class="text-decoration-none">
+                                        <i class="bi bi-link-45deg"></i> {{ custom_value.value_text|truncatechars:40 }}
+                                    </a>
+                                {% elif custom_value.field.field_type == 'email' %}
+                                    <a href="mailto:{{ custom_value.value_text }}" class="text-decoration-none">
+                                        <i class="bi bi-envelope"></i> {{ custom_value.value_text }}
+                                    </a>
+                                {% elif custom_value.field.field_type == 'textarea' %}
+                                    <div class="small" style="white-space: pre-wrap;">{{ custom_value.value_text|default:"—" }}</div>
+                                {% elif custom_value.field.field_type == 'date' and custom_value.value_date %}
+                                    <i class="bi bi-calendar3"></i> {{ custom_value.value_date|date:"F d, Y" }}
+                                {% else %}
+                                    {{ custom_value.get_value|default:"—" }}
+                                {% endif %}
+                            </div>
+                            {% if custom_value.field.help_text %}
+                                <small class="text-muted mt-1 d-block">
+                                    <i class="bi bi-info-circle"></i> {{ custom_value.field.help_text }}
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Location History Section -->
+        <div class="card shadow-sm border-0 rounded-4 mt-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-clock-history me-2"></i>Location History
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Date & Time</th>
+                                <th>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in location_history %}
+                            <tr>
+                                <td class="ps-4">{{ log.moved_at|date:"M d, Y h:i A" }}</td>
+                                <td>
+                                    <span class="badge bg-info bg-opacity-10 text-info border">
+                                        {{ log.location.name|default:"No Location" }}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center py-4 text-muted">No movement history recorded.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Repair History Section -->
+        <div class="card shadow-sm border-0 rounded-4 mt-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h5 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-wrench-adjustable me-2"></i>Repair History
+                </h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ticket #</th>
+                                <th>Reported Date</th>
+                                <th>Issue</th>
+                                <th>Status</th>
+                                <th>Cost</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ticket in item.repair_tickets.all|dictsortreversed:"reported_date" %}
+                            <tr>
+                                <td class="fw-bold">{{ ticket.ticket_number }}</td>
+                                <td>{{ ticket.reported_date|date:"M d, Y" }}</td>
+                                <td class="text-truncate" style="max-width: 200px;">{{ ticket.issue_description }}</td>
+                                <td>
+                                    <span class="badge {% if ticket.status == 'completed' %}bg-success{% elif ticket.status == 'cancelled' %}bg-secondary{% else %}bg-warning text-dark{% endif %}">
+                                        {{ ticket.get_status_display }}
+                                    </span>
+                                </td>
+                                <td class="text-success">₱{{ ticket.actual_cost|default:"0.00" }}</td>
+                                <td class="text-end">
+                                    <a href="{% url 'repairs:ticket_detail' ticket.id %}" class="btn btn-sm btn-link">View</a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">No repair history found for this item.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
 <script>
-    function copyToClipboard(text) {
-        navigator.clipboard.writeText(text).then(function() {
-            // Show temporary success message
-            const btn = event.target.closest('button');
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-check"></i>';
-            setTimeout(() => {
-                btn.innerHTML = originalHtml;
-            }, 2000);
-        });
+function confirmAndMarkInRepair(itemId) {
+    if (confirm('Mark this item as "In Repair" and create a repair ticket?')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "mark_item_in_repair" 0 %}'.replace('/0/', '/' + itemId + '/');
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfToken) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'csrfmiddlewaretoken';
+            input.value = csrfToken.value;
+            form.appendChild(input);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     }
+}
 </script>
+{% endblock %}

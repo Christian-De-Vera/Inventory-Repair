@@ -5,21 +5,142 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ICT Inventory System - {% block title %}Home{% endblock %}</title>
     
-    <!-- Google Fonts: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     
-    <!-- Custom CSS -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8f9fa;
         }
+        
+        /* --- Sidebar & Toggle Styles --- */
+        .sidebar {
+            width: 280px;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: width 0.3s ease;
+        }
+        
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            transition: all 0.2s ease;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .sidebar .nav-link:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Collapsed State Styles */
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .brand-text,
+        .sidebar.collapsed .footer-text {
+            display: none;
+        }
+        .sidebar.collapsed .navbar-brand {
+            justify-content: center;
+            width: 100%;
+        }
+        .sidebar.collapsed .sidebar-header {
+            flex-direction: column-reverse;
+            gap: 1rem !important;
+        }
+        .sidebar.collapsed .nav-link {
+            justify-content: center;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0 !important;
+            font-size: 1.25rem;
+        }
+
+        /* Toggle Button */
+        .sidebar-toggle {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+            transition: opacity 0.2s;
+        }
+        .sidebar-toggle:hover {
+            opacity: 0.8;
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100% !important;
+                height: auto;
+                position: static;
+            }
+            .sidebar-toggle {
+                display: none;
+            }
+        }
+        /* -------------------------- */
+
+        /* Alert/Toast Notifications */
+        .alert-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            max-width: 450px;
+            animation: slideIn 0.3s ease-out;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .alert-notification.fade-out {
+            animation: slideOut 0.3s ease-out forwards;
+        }
+        
+        .alert-notification .btn-close {
+            cursor: pointer;
+        }
+        
+        .alert-notification:hover {
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+        }
+
         .status-badge {
             font-size: 0.85rem;
             padding: 0.35rem 0.65rem;
@@ -30,6 +151,8 @@
         .status-in_repair { background-color: #fff3cd; color: #664d03; }
         .status-decommissioned { background-color: #f8d7da; color: #842029; }
         .status-lost { background-color: #e2e3e5; color: #41464b; }
+        .status-expired { background-color: #f8d7da; color: #721c24; }
+        .status-warning { background-color: #fff3cd; color: #856404; }
         
         .thumbnail-img {
             width: 56px;
@@ -38,98 +161,193 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
+        
         .navbar-brand {
             font-weight: 700;
             letter-spacing: -0.5px;
         }
+        
         .card {
             border: none;
             border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
         }
+        
         .card-hover {
             transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+        
         .card-hover:hover {
             transform: translateY(-4px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
         }
+        
         footer {
             background-color: #ffffff;
             border-top: 1px solid #e9ecef;
-        }
-        .status-expired { 
-            background-color: #f8d7da; 
-            color: #721c24; 
-        }
-        .status-warning { 
-            background-color: #fff3cd; 
-            color: #856404; 
         }
     </style>
     
     {% block extra_css %}{% endblock %}
 </head>
-<body class="min-vh-100 d-flex flex-column">
-    <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm sticky-top">
-        <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'item_list' %}">
-                <i class="bi bi-box-seam fs-4"></i> 
-                <span>ICT Inventory & Repair Tracker</span>
+<body class="min-vh-100 d-flex flex-column flex-md-row">
+    
+    <!-- Notification Container -->
+    <div id="notificationContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+    
+    <nav class="sidebar bg-primary shadow flex-shrink-0 p-3 d-flex flex-column" id="sidebar">
+        
+        <div class="sidebar-header d-flex align-items-center justify-content-between mb-4">
+            <a class="navbar-brand text-white d-flex align-items-center gap-3 text-decoration-none flex-grow-1" href="{% url 'item_list' %}">
+                <i class="bi bi-box-seam fs-3"></i> 
+                <span class="fs-5 lh-sm brand-text">ICT Inventory</span>
             </a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+            <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">
+                <i class="bi bi-list"></i>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto gap-2">
-                    <li class="nav-item">
-                        <a class="nav-link px-3 rounded text-white hover-bg-light-alpha" href="{% url 'item_list' %}">
-                            <i class="bi bi-list"></i> All Items
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 rounded text-white" href="{% url 'item_add' %}">
-                            <i class="bi bi-plus-circle"></i> Add Item
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link px-3 rounded text-white" href="/admin/">
-                            <i class="bi bi-shield-lock"></i> Admin
-                        </a>
-                    </li>
-                </ul>
-            </div>
+        </div>
+        
+        <hr class="text-white-50 mt-0">
+        
+        <ul class="nav nav-pills flex-column gap-2 mb-auto">
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="{% url 'item_list' %}">
+                    <i class="bi bi-grid-3x3-gap-fill me-3"></i> 
+                    <span class="nav-text">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="{% url 'item_list' %}">
+                    <i class="bi bi-box-seam me-3"></i> 
+                    <span class="nav-text">All Items</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="{% url 'item_add' %}">
+                    <i class="bi bi-plus-circle me-3"></i> 
+                    <span class="nav-text">Add Item</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="{% url 'custom_fields_list' %}">
+                    <i class="bi bi-puzzle me-3"></i> 
+                    <span class="nav-text">Custom Fields</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="/admin/">
+                    <i class="bi bi-shield-lock me-3"></i> 
+                    <span class="nav-text">Admin</span>
+                </a>
+            </li>
+        </ul>
+        
+        <hr class="text-white-50">
+        
+        <div class="text-white-50 small text-center mt-2 footer-text">
+            &copy; 2026 ICT Supply
         </div>
     </nav>
     
-    <!-- Main Content -->
-    <main class="container my-4 flex-grow-1">
-        {% if messages %}
-            <div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;">
-                {% for message in messages %}
-                    <div class="alert alert-{% if message.tags == 'success' %}success{% elif message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show shadow-sm" role="alert">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="bi bi-info-circle-fill"></i>
-                            <div>{{ message }}</div>
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
+    <div class="d-flex flex-column flex-grow-1 min-vh-100 w-100 overflow-hidden">
         
-        {% block content %}{% endblock %}
-    </main>
+        <main class="container-fluid px-4 px-md-5 my-4 flex-grow-1">
+            {% if messages %}
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        {% for message in messages %}
+                            showNotification('{{ message|escapejs }}', '{% if message.tags == "success" %}success{% elif message.tags == "error" %}danger{% else %}info{% endif %}');
+                        {% endfor %}
+                    });
+                </script>
+            {% endif %}
+            
+            {% block content %}{% endblock %}
+        </main>
+        
+        <footer class="mt-auto py-4">
+            <div class="container-fluid px-4 px-md-5 text-center text-md-start">
+                <p class="mb-0 text-muted small">ICT Supply Inventory & Repair Service Tracker &copy; 2026</p>
+            </div>
+        </footer>
+    </div>
     
-    <!-- Footer -->
-    <footer class="mt-auto py-4">
-        <div class="container text-center">
-            <p class="mb-0 text-muted small">ICT Supply Inventory & Repair Service Tracker &copy; 2026</p>
-        </div>
-    </footer>
-    
-    <!-- Bootstrap JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Sidebar Toggle
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.getElementById('sidebarToggle');
+            
+            if (toggleBtn && sidebar) {
+                toggleBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('collapsed');
+                });
+            }
+            
+            // Active link highlighting
+            const currentPath = window.location.pathname;
+            document.querySelectorAll('.nav-link').forEach(link => {
+                const href = link.getAttribute('href');
+                if (href && href !== '#' && href !== '/admin/' && currentPath === href) {
+                    link.classList.add('active');
+                } else if (href === '/admin/' && currentPath.startsWith('/admin/')) {
+                    link.classList.add('active');
+                }
+            });
+        });
+        
+        // Notification System
+        function showNotification(message, type) {
+            const container = document.getElementById('notificationContainer');
+            if (!container) return;
+            
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show alert-notification`;
+            notification.setAttribute('role', 'alert');
+            notification.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi ${type === 'success' ? 'bi-check-circle-fill' : type === 'danger' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i>
+                    <div>${message}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            
+            container.appendChild(notification);
+            
+            // Add click handler for close button
+            const closeBtn = notification.querySelector('.btn-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (notification.parentNode) notification.remove();
+                    }, 300);
+                });
+            }
+            
+            // Auto dismiss after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (notification.parentNode) notification.remove();
+                    }, 300);
+                }
+            }, 5000);
+            
+            // Click anywhere on notification to dismiss
+            notification.addEventListener('click', function(e) {
+                if (e.target !== closeBtn && !closeBtn.contains(e.target)) {
+                    notification.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (notification.parentNode) notification.remove();
+                    }, 300);
+                }
+            });
+        }
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>

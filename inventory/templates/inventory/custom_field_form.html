@@ -1,0 +1,90 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <h4 class="mb-0 fw-bold text-primary">
+                    <i class="bi bi-puzzle me-2"></i>
+                    {{ title }}
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Field Name <span class="text-danger">*</span></label>
+                            <input type="text" name="name" class="form-control" 
+                                   value="{{ custom_field.name|default:'' }}" 
+                                   placeholder="e.g., Warranty Info, Supplier" required>
+                            <div class="form-text text-muted">This will be displayed as the field label</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Field Type <span class="text-danger">*</span></label>
+                            <select name="field_type" class="form-select" required>
+                                <option value="text" {% if custom_field.field_type == 'text' %}selected{% endif %}>📝 Text (Single line)</option>
+                                <option value="textarea" {% if custom_field.field_type == 'textarea' %}selected{% endif %}>📄 Multi-line Text</option>
+                                <option value="number" {% if custom_field.field_type == 'number' %}selected{% endif %}>🔢 Number</option>
+                                <option value="date" {% if custom_field.field_type == 'date' %}selected{% endif %}>📅 Date</option>
+                                <option value="boolean" {% if custom_field.field_type == 'boolean' %}selected{% endif %}>✅ Yes/No (Checkbox)</option>
+                                <option value="url" {% if custom_field.field_type == 'url' %}selected{% endif %}>🔗 URL/Link</option>
+                                <option value="email" {% if custom_field.field_type == 'email' %}selected{% endif %}>✉️ Email</option>
+                            </select>
+                            <div class="form-text text-muted">What type of data will this field store?</div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <div class="form-check form-switch mb-2">
+                                <input type="checkbox" name="is_required" class="form-check-input" 
+                                       id="is_required" {% if custom_field.is_required %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="is_required">
+                                    Required Field
+                                </label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input type="checkbox" name="is_active" class="form-check-input" 
+                                       id="is_active" {% if custom_field.is_active or not custom_field %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="is_active">
+                                    Active (Show on forms)
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Placeholder (Optional)</label>
+                            <input type="text" name="placeholder" class="form-control" 
+                                   value="{{ custom_field.placeholder|default:'' }}"
+                                   placeholder="e.g., Enter warranty expiration date">
+                            <div class="form-text text-muted">Hint text shown inside the input field</div>
+                        </div>
+                        
+                        <div class="col-md-12">
+                            <label class="form-label fw-bold">Help Text (Optional)</label>
+                            <textarea name="help_text" class="form-control" rows="2" 
+                                      placeholder="e.g., When does the warranty expire?">{{ custom_field.help_text|default:'' }}</textarea>
+                            <div class="form-text text-muted">Additional guidance shown below the field</div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'custom_fields_list' %}" class="btn btn-light border px-4">
+                            <i class="bi bi-x-circle me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success px-5 shadow-sm">
+                            <i class="bi bi-check2-circle me-1"></i> Save Custom Field
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repair Ticketing - {% block title %}Home{% endblock %}</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --sidebar-collapsed-width: 80px;
+            --sidebar-bg: linear-gradient(135deg, #0d9488 100%);
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        /* Sidebar orange theme */
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: all var(--transition-speed) ease;
+            background: var(--sidebar-bg);
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            transition: background 0.2s ease, color 0.2s ease;
+            font-weight: 500;
+            padding: 0.75rem 1rem;
+            white-space: nowrap;
+        }
+
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+
+        /* Toggleable Sidebar Styles */
+        .sidebar.collapsed .nav-text,
+        .sidebar.collapsed .brand-text,
+        .sidebar.collapsed .footer-text {
+            display: none;
+        }
+
+        .sidebar.collapsed .navbar-brand,
+        .sidebar.collapsed .nav-link,
+        .sidebar.collapsed .module-switch-btn {
+            justify-content: center;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }
+
+        .sidebar.collapsed .sidebar-header {
+            flex-direction: column-reverse;
+            gap: 1rem !important;
+        }
+
+        .sidebar.collapsed .nav-link i {
+            margin-right: 0 !important;
+            font-size: 1.25rem;
+        }
+
+        .module-switch-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            color: white !important;
+            transition: all 0.3s ease;
+        }
+        .module-switch-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+        .module-icon-box {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0d6efd; /* Inventory Blue */
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .sidebar.collapsed .module-switch-btn {
+            border: none;
+            background: transparent;
+            justify-content: center;
+            padding: 10px 0;
+        }
+        .sidebar.collapsed .module-icon-box {
+            margin-right: 0 !important;
+        }
+
+        .sidebar .nav-link:hover {
+            color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            transition: margin-left var(--transition-speed) ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.collapsed ~ .main-content {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .sidebar {
+                left: calc(var(--sidebar-width) * -1);
+                box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            }
+            .sidebar.show {
+                left: 0;
+            }
+            .main-content {
+                margin-left: 0 !important;
+            }
+            .sidebar.collapsed ~ .main-content {
+                margin-left: 0 !important;
+            }
+        }
+        
+        .top-bar {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            justify-content: flex-end;
+        }
+        
+        .top-bar-left {
+            flex: 1;
+        }
+        
+        .notification-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            left: auto;
+            z-index: 1000;
+            margin-top: 8px;
+        }
+        
+        /* Orange buttons for repair theme */
+        .btn-primary {
+            background-color: #e67e22;
+            border-color: #e67e22;
+        }
+        .btn-primary:hover {
+            background-color: #d35400;
+            border-color: #d35400;
+        }
+        .btn-outline-primary {
+            color: #e67e22;
+            border-color: #e67e22;
+        }
+        .btn-outline-primary:hover {
+            background-color: #e67e22;
+            color: white;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+        footer {
+            background-color: #ffffff;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .no-transition {
+            transition: none !important;
+        }
+
+        /* Backdrop for mobile */
+        .sidebar-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+        .sidebar-backdrop.show {
+            display: block;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="min-vh-100">
+    
+    <!-- Sidebar Navigation -->
+    <nav class="sidebar shadow flex-shrink-0 p-3 d-flex flex-column" id="sidebar">
+        <div class="sidebar-header d-flex align-items-center justify-content-between mb-4">
+            <a class="navbar-brand text-white d-flex align-items-center gap-3 text-decoration-none flex-grow-1" href="{% url 'repairs:ticket_list' %}">
+                <i class="bi bi-tools fs-3"></i>
+                <span class="fs-5 lh-sm brand-text">Repair Tickets</span>
+            </a>
+            <button class="btn btn-outline-light btn-sm d-flex align-items-center" id="sidebarToggleBtn" type="button">
+                <i class="bi bi-list"></i>
+            </button>
+        </div>
+        <hr class="text-white-50 mt-0">
+        
+        <ul class="nav nav-pills flex-column gap-2 mb-auto">
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center {% if request.resolver_match.url_name == 'repair_dashboard' %}active{% endif %}" href="{% url 'repairs:repair_dashboard' %}">
+                    <i class="bi bi-speedometer2 me-3"></i><span class="nav-text">Dashboard</span>
+                </a>
+            </li>
+            {% if perms.repairs.view_repairticket %}
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center {% if request.resolver_match.url_name == 'ticket_list' %}active{% endif %}" href="{% url 'repairs:ticket_list' %}">
+                    <i class="bi bi-list-ul me-3"></i><span class="nav-text">All Tickets</span>
+                </a>
+            </li>
+            {% endif %}
+            {% if perms.repairs.add_repairticket %}
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="{% url 'repairs:ticket_create' %}">
+                    <i class="bi bi-plus-circle me-3"></i><span class="nav-text">New Ticket</span>
+                </a>
+            </li>
+            {% endif %}
+            {% if request.user.is_staff or request.user.is_superuser %}
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="/admin/">
+                    <i class="bi bi-shield-lock me-3"></i><span class="nav-text">Admin</span>
+                </a>
+            </li>
+            {% endif %}
+            {% if perms.auth.change_user %}
+            <li class="nav-item">
+                <a class="nav-link px-3 rounded d-flex align-items-center" href="{% url 'account_user_list' %}">
+                    <i class="bi bi-people me-3"></i><span class="nav-text">User Roles</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        
+        <hr class="text-white-50">
+        {% if perms.inventory.view_item %}
+        <div class="module-switch-container mt-auto mb-2 px-3">
+            <a class="module-switch-btn d-flex align-items-center justify-content-between text-decoration-none" href="{% url 'dashboard' %}" title="Switch to Inventory Module">
+                <div class="d-flex align-items-center">
+                    <div class="module-icon-box me-3">
+                        <i class="bi bi-box-seam text-white"></i>
+                    </div>
+                    <span class="nav-text fw-semibold">Inventory Module</span>
+                </div>
+                <i class="bi bi-chevron-right nav-text small opacity-50"></i>
+            </a>
+        </div>
+        <hr class="text-white-50">
+        {% endif %}
+        <div class="px-3 mb-3 footer-text">
+            <div class="text-white small fw-semibold text-truncate">{{ request.user.get_full_name|default:request.user.username }}</div>
+            <form method="post" action="{% url 'logout' %}" class="mt-2">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-light w-100">
+                    <i class="bi bi-box-arrow-right me-1"></i><span class="nav-text">Logout</span>
+                </button>
+            </form>
+        </div>
+        <div class="text-white-50 small text-center mt-2 footer-text">&copy; 2026 ICT Repair</div>
+    </nav>
+    
+    <!-- Mobile Backdrop -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+    <div class="main-content d-flex flex-column min-vh-100 overflow-hidden" id="main-content">
+    <div class="top-bar d-flex justify-content-end">
+        {% csrf_token %}
+        <div class="top-bar-left d-none d-md-block">
+            <span class="fw-bold text-dark">Repair Tickets</span>
+        </div>
+        <button class="btn btn-outline-primary border-0 d-md-none" id="mobileSidebarToggle">
+            <i class="bi bi-list fs-4"></i>
+        </button>
+        <div class="position-relative" id="notification-bell-container">
+            <button class="btn btn-outline-secondary border-0 position-relative" id="notification-bell" title="Notifications">
+                <i class="bi bi-bell fs-5"></i>
+                {% if unread_notification_count %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notification-badge">{{ unread_notification_count }}</span>
+                {% endif %}
+            </button>
+            <div class="dropdown-menu dropdown-menu-end p-2 notification-dropdown" id="notification-dropdown" style="min-width: 320px; max-height: 400px; overflow-y: auto; display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+                    <h6 class="mb-0 fw-bold">Notifications</h6>
+                    <button class="btn btn-sm btn-link text-decoration-none" id="mark-all-read">Mark all read</button>
+                </div>
+                <div id="notification-list"></div>
+            </div>
+        </div>
+    </div>
+        
+        <main class="container-fluid px-4 px-md-5 my-4 flex-grow-1">
+            {% if messages %}
+                <div id="message-container">
+                    {% for message in messages %}
+                        <div class="alert alert-{% if message.tags == 'success' %}success{% elif message.tags == 'error' %}danger{% else %}info{% endif %} alert-dismissible fade show shadow-sm" role="alert">
+                            <div class="d-flex align-items-center gap-2"><i class="bi bi-info-circle-fill"></i><div>{{ message }}</div></div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% block content %}{% endblock %}
+        </main>
+        
+        <footer class="mt-auto py-4">
+            <div class="container-fluid px-4 px-md-5 text-center text-md-start">
+                <p class="mb-0 text-muted small">ICT Repair Ticketing System &copy; 2026</p>
+            </div>
+        </footer>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Auto-dismiss alerts after 5 seconds
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                setTimeout(function() { if (alert) new bootstrap.Alert(alert).close(); }, 5000);
+            });
+
+            const sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+            const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
+            const sidebarBackdrop = document.getElementById('sidebarBackdrop');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            
+            function toggleMobileSidebar() {
+                sidebar.classList.toggle('show');
+                sidebarBackdrop.classList.toggle('show');
+            }
+
+            if (sidebarToggleBtn) {
+                sidebarToggleBtn.addEventListener('click', function() {
+                    if (window.innerWidth <= 768) {
+                        toggleMobileSidebar();
+                    } else {
+                        sidebar.classList.toggle('collapsed');
+                        localStorage.setItem('repairSidebarCollapsed', sidebar.classList.contains('collapsed'));
+                    }
+                });
+            }
+
+            // Restore sidebar state on PC
+            if (window.innerWidth > 768) {
+                const isCollapsed = localStorage.getItem('repairSidebarCollapsed') === 'true';
+                if (isCollapsed) {
+                    // Temporarily disable transitions to prevent animation on page load
+                    sidebar.classList.add('no-transition');
+                    if (mainContent) mainContent.classList.add('no-transition');
+                    
+                    sidebar.classList.add('collapsed');
+                    
+                    // Force a reflow to apply the class instantly
+                    sidebar.offsetHeight;
+                    
+                    // Re-enable transitions for future manual toggles
+                    sidebar.classList.remove('no-transition');
+                    if (mainContent) mainContent.classList.remove('no-transition');
+                }
+            }
+            
+            if (mobileSidebarToggle) {
+                mobileSidebarToggle.addEventListener('click', toggleMobileSidebar);
+            }
+
+            if (sidebarBackdrop) {
+                sidebarBackdrop.addEventListener('click', toggleMobileSidebar);
+            }
+
+            // Close sidebar when clicking outside on mobile
+            document.addEventListener('click', function(event) {
+                const isMobile = window.innerWidth <= 768;
+                const isClickInsideSidebar = sidebar.contains(event.target);
+                const isClickInsideToggle = mobileSidebarToggle?.contains(event.target);
+
+                if (isMobile && !isClickInsideSidebar && !isClickInsideToggle && sidebar.classList.contains('show')) {
+                    toggleMobileSidebar();
+                }
+            });
+        });
+    </script>
+    
+    <script>
+        // Notification bell functionality (shared with inventory base)
+        document.addEventListener("DOMContentLoaded", function() {
+            const notificationBell = document.getElementById('notification-bell');
+            const notificationDropdown = document.getElementById('notification-dropdown');
+            const notificationList = document.getElementById('notification-list');
+            const markAllReadBtn = document.getElementById('mark-all-read');
+            
+function fetchNotifications() {
+                if (!notificationList) return;
+                fetch("/notifications/api/list/")
+                    .then(r => {
+                        if (!r.ok) throw new Error('Network response was not ok');
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (data.notifications.length === 0) {
+                            notificationList.innerHTML = '<div class="text-center text-muted py-3">No notifications</div>';
+                            return;
+                        }
+                        notificationList.innerHTML = data.notifications.map(n => `
+                            <div class="p-2 mb-1 rounded ${n.is_read ? '' : 'bg-light'}" style="border: 1px solid #e9ecef;" data-notification-id="${n.id}">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="me-2">
+                                        <i class="bi ${getIconForType(n.type)} me-1"></i>
+                                        <strong>${n.title}</strong>
+                                    </div>
+                                    <small class="text-muted">${n.created_at}</small>
+                                </div>
+                                <div class="small text-muted mt-1">${n.message}</div>
+                                ${n.item_id ? `<a href="/inventory/detail/${n.item_id}/" class="btn btn-sm btn-outline-primary mt-2">View Item</a>` : ''}
+                                ${n.ticket_id ? `<a href="/repairs/${n.ticket_id}/" class="btn btn-sm btn-outline-primary mt-2">View Ticket</a>` : ''}
+                            </div>
+                            `).join('');
+                    })
+                    .catch(err => {
+                        console.error('Failed to fetch notifications:', err);
+                        notificationList.innerHTML = '<div class="text-center text-danger py-3">Failed to load notifications</div>';
+                    });
+            }
+            
+            function getIconForType(type) {
+                const icons = {
+                    'repair_ticket_new': 'bi-tools',
+                    'repair_ticket_resolved': 'bi-check-circle',
+                    'item_in_repair': 'bi-exclamation-triangle',
+                    'item_status_changed': 'bi-arrow-clockwise',
+                    'item_moved': 'bi-geo-alt'
+                };
+                return icons[type] || 'bi-bell';
+            }
+            
+            function updateBadgeCount() {
+                const badge = document.getElementById('notification-badge');
+                if (!badge) return;
+                fetch("/notifications/api/unread-count/")
+                    .then(r => {
+                        if (!r.ok) throw new Error('Network response was not ok');
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (data.count > 0) {
+                            badge.textContent = data.count;
+                        } else {
+                            badge.remove();
+                        }
+                    })
+                    .catch(err => console.error('Failed to update badge:', err));
+            }
+            
+            if (notificationBell) {
+                notificationBell.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    fetchNotifications();
+                    notificationDropdown.style.display = notificationDropdown.style.display === 'block' ? 'none' : 'block';
+                });
+            }
+            
+            document.addEventListener('click', function(e) {
+                if (notificationDropdown && !notificationBell?.contains(e.target) && !notificationDropdown.contains(e.target)) {
+                    notificationDropdown.style.display = 'none';
+                }
+            });
+            
+            if (markAllReadBtn) {
+                markAllReadBtn.addEventListener('click', function() {
+                    const unreadIds = Array.from(document.querySelectorAll('[data-notification-id]'))
+                        .filter(el => el.classList.contains('bg-light'))
+                        .map(el => el.getAttribute('data-notification-id'));
+                    if (unreadIds.length > 0) {
+                        const formData = new FormData();
+                        unreadIds.forEach(id => formData.append('ids[]', id));
+                        fetch("/notifications/api/mark-read/", {
+                            method: 'POST',
+                            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''},
+                            body: formData
+                        }).then(() => {
+                            fetchNotifications();
+                            updateBadgeCount();
+                        }).catch(err => console.error('Failed to mark read:', err));
+                    }
+                });
+            }
+            
+            updateBadgeCount();
+            
+            setInterval(updateBadgeCount, 30000);
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

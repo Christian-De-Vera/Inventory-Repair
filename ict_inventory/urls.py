@@ -18,10 +18,16 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from inventory import views as inventory_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include('accounts.urls')),
+    path('', inventory_views.dashboard, name='dashboard'),
     path('inventory/', include('inventory.urls')),
+    path('inventory/hierarchy/<int:id>/', inventory_views.item_hierarchy, name='item_hierarchy'),
+    path('repairs/', include('repairs.urls')),
+    path('notifications/', include('notifications.urls')),
 ]
 
 if settings.DEBUG:

@@ -1,0 +1,679 @@
+{% extends 'inventory/inventory_base.html' %}
+{% load humanize %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --dash-primary: #4361ee;
+        --dash-success: #2ec4b6;
+        --dash-info: #3a86ff;
+        --dash-warning: #ff9f1c;
+        --dash-danger: #e71d36;
+        --dash-bg: #f8f9fa;
+    }
+    body { background-color: var(--dash-bg); }
+    .dashboard-header {
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    .stat-card {
+        border: none;
+        border-radius: 1rem;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 1rem 3rem rgba(0,0,0,0.1) !important;
+    }
+    .stat-icon {
+        width: 54px;
+        height: 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.85rem;
+        font-size: 1.75rem;
+        flex-shrink: 0;
+    }
+    .alert-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    .chart-container {
+        width: 100%;
+        min-width: 320px;
+        background: #fff;
+        border-radius: 1rem;
+    }
+    .chart-card {
+        border: none;
+        border-radius: 1rem;
+    }
+    .chart-card .card-body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 280px;
+    }
+    .table thead th {
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+        background-color: #f8f9fa;
+        border-top: none;
+    }
+    .card-header {
+        background-color: transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 1.25rem;
+    }
+    .chart-controls select {
+        border-radius: 0.5rem;
+        border: 1px solid #e0e0e0;
+        padding: 0.4rem 2rem 0.4rem 0.75rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-header d-flex justify-content-between align-items-end mb-4">
+    <div>
+        <h2 class="fw-bold mb-0 text-dark">Inventory Overview</h2>
+        <p class="text-muted small mb-0">System status as of {% now "F d, Y - H:i" %}</p>
+    </div>
+    <div class="d-flex gap-2">
+        {% if perms.inventory.add_item %}
+            <a href="{% url 'item_add' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="bi bi-plus-lg me-2"></i>Add Item
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary me-3">
+                        <i class="bi bi-cpu"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small fw-bold text-uppercase mb-0">Total Items</p>
+                        <h3 class="fw-bold mb-0">{{ total_items|default:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card shadow-sm h-100">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success me-3">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small fw-bold text-uppercase mb-0">Total Value</p>
+                        <h3 class="fw-bold mb-0">₱{{ total_asset_value|default:0|floatformat:0|intcomma }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card shadow-sm h-100" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#itemsModal" data-item-type="available">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info me-3">
+                        <i class="bi bi-check-circle"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small fw-bold text-uppercase mb-0">Available</p>
+                        <h3 class="fw-bold mb-0">{{ active_items_count|default:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card stat-card shadow-sm h-100" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#itemsModal" data-item-type="repair">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center">
+                    <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                        <i class="bi bi-wrench-adjustable"></i>
+                    </div>
+                    <div>
+                        <p class="text-muted small fw-bold text-uppercase mb-0">In Repair</p>
+                        <h3 class="fw-bold mb-0">{{ in_repair_items_count|default:0 }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row g-4 mb-5">
+    <!-- Primary Analytics -->
+    <div class="col-xl-8">
+        <div class="chart-container shadow-sm overflow-hidden" style="height: 400px;">
+            <div class="card chart-card h-100 border-0">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 id="mainPieCardTitle" class="mb-0 fw-bold">Distribution</h5>
+                    <div class="chart-controls d-flex gap-2">
+                        <select id="chartTypeSelect" class="form-select form-select-sm">
+                            <option value="status">by Status</option>
+                            <option value="category">by Category</option>
+                            <option value="department">by Department</option>
+                            <option value="location">by Location</option>
+                            <option value="custodian">by Custodian</option>
+                        </select>
+                        <select id="chartStyleSelect" class="form-select form-select-sm">
+                            <option value="doughnut">Doughnut</option>
+                            <option value="pie">Pie</option>
+                            <option value="bar">Bar</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    <canvas id="mainPieChart" style="max-width: 100%; height: 280px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Critical Alerts Sidebar -->
+    <div class="col-xl-4">
+        <div class="d-flex flex-column gap-3 h-100">
+            <div class="card border-0 shadow-sm rounded-4 flex-fill" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#itemsModal" data-item-type="expiring">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="stat-icon bg-warning bg-opacity-10 text-warning me-3">
+                            <i class="bi bi-hourglass-split"></i>
+                        </div>
+                        <h6 class="fw-bold mb-0">Expiring Soon</h6>
+                    </div>
+                    <h2 class="fw-bold">{{ expiring_soon_count|default:0 }}</h2>
+                    <p class="text-muted small">Items requiring retirement within 30 days.</p>
+                </div>
+            </div>
+            <div class="card border-0 shadow-sm rounded-4 flex-fill" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#itemsModal" data-item-type="expired">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="stat-icon bg-danger bg-opacity-10 text-danger me-3">
+                            <i class="bi bi-exclamation-octagon"></i>
+                        </div>
+                        <h6 class="fw-bold mb-0">Expired Items</h6>
+                    </div>
+                    <h2 class="fw-bold">{{ expired_count|default:0 }}</h2>
+                    <p class="text-muted small">Items currently past their EOL date.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tables Row -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold text-warning"><i class="bi bi-hourglass-split me-2"></i>Expiring Soon (30 days)</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Item</th><th>EOL Date</th><th>Days left</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in expiring_soon %}
+                            {% if item.id %}
+                            <tr>
+                                <td><a href="{% url 'item_detail' item.id %}">{{ item.name }}</a></td>
+                                <td>{{ item.end_of_life_date|date:"Y-m-d" }}</td>
+                                <td>{{ item.get_days_until_eol }}</td>
+                            </tr>
+                            {% endif %}
+                            {% empty %}
+                            <tr><td colspan="3" class="text-muted text-center">No items expiring soon</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer bg-white border-top text-end">
+                <a href="{% url 'item_list' %}?expiring=1" class="btn btn-sm btn-primary">View all expiring soon</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card border-0 shadow-sm rounded-4 h-100">
+            <div class="card-header bg-white border-bottom py-3">
+                <h6 class="mb-0 fw-bold text-success"><i class="bi bi-clock-history me-2"></i>Recently Added</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr><th>Item</th><th>Category</th><th>Location</th><th>Added On</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in recent_items %}
+                            {% if item.id %}
+                            <tr>
+                                <td><a href="{% url 'item_detail' item.id %}">{{ item.name }}</a></td>
+                                <td>{{ item.category.name|default:"—" }}</td>
+                                <td>{{ item.location.name|default:"—" }}</td>
+                                <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            {% endif %}
+                            {% empty %}
+                            <tr><td colspan="4" class="text-muted text-center">No items yet</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{ status_labels|json_script:"status_labels" }}
+{{ status_data|json_script:"status_data" }}
+{{ category_labels|json_script:"category_labels" }}
+{{ category_data|json_script:"category_data" }}
+{{ location_labels|json_script:"location_labels" }}
+{{ location_data|json_script:"location_data" }}
+{{ person_labels|json_script:"person_labels" }}
+{{ person_data|json_script:"person_data" }}
+{{ department_labels|json_script:"department_labels" }}
+{{ department_data|json_script:"department_data" }}
+<script id="active_items" type="application/json">{{ active_items|safe }}</script>
+<script id="in_repair_items" type="application/json">{{ in_repair_items|safe }}</script>
+<script id="expiring_soon_json" type="application/json">{{ expiring_soon_json|safe }}</script>
+<script id="expired_json" type="application/json">{{ expired_json|safe }}</script>
+<script id="status_items" type="application/json">{{ status_items_json|safe }}</script>
+<script id="category_items" type="application/json">{{ category_items_json|safe }}</script>
+<script id="location_items" type="application/json">{{ location_items_json|safe }}</script>
+<script id="person_items" type="application/json">{{ person_items_json|safe }}</script>
+<script id="department_items" type="application/json">{{ department_items_json|safe }}</script>
+<script id="status_label_to_code" type="application/json">{{ status_label_to_code|safe }}</script>
+<script id="category_label_to_id" type="application/json">{{ category_label_to_id|safe }}</script>
+<script id="location_label_to_id" type="application/json">{{ location_label_to_id|safe }}</script>
+<script id="person_label_to_id" type="application/json">{{ person_label_to_id|safe }}</script>
+
+<!-- Items Modal -->
+<div class="modal fade" id="itemsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="itemsModalTitle">Items</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="text-center"><input class="form-check-input" type="checkbox" id="selectAllItems"></th>
+                                <th scope="col">Item</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Location</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="itemsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between align-items-center">
+                <div class="text-muted small">Select items to edit, or open the full group in Inventory.</div>
+                <div class="d-flex gap-2">
+                    <a href="#" id="viewGroupInventoryBtn" class="btn btn-outline-secondary">View group in Inventory</a>
+                    <button type="button" class="btn btn-primary" id="viewSelectedInventoryBtn" disabled>Edit selected</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    (function() {
+        // Handle items modal
+        const itemsModal = document.getElementById('itemsModal');
+        const itemsModalTitle = document.getElementById('itemsModalTitle');
+        const itemsTableBody = document.getElementById('itemsTableBody');
+
+        const activeItems = JSON.parse(document.getElementById('active_items').textContent || '[]');
+        const inRepairItems = JSON.parse(document.getElementById('in_repair_items').textContent || '[]');
+        const expiringItems = JSON.parse(document.getElementById('expiring_soon_json').textContent || '[]');
+        const expiredItems = JSON.parse(document.getElementById('expired_json').textContent || '[]');
+        const statusItems = JSON.parse(document.getElementById('status_items').textContent || '{}');
+        const categoryItems = JSON.parse(document.getElementById('category_items').textContent || '{}');
+        const locationItems = JSON.parse(document.getElementById('location_items').textContent || '{}');
+        const personItems = JSON.parse(document.getElementById('person_items').textContent || '{}');
+        const departmentItems = JSON.parse(document.getElementById('department_items').textContent || '{}');
+        const statusLabelToCode = JSON.parse(document.getElementById('status_label_to_code').textContent || '{}');
+        const categoryLabelToId = JSON.parse(document.getElementById('category_label_to_id').textContent || '{}');
+        const locationLabelToId = JSON.parse(document.getElementById('location_label_to_id').textContent || '{}');
+        const personLabelToId = JSON.parse(document.getElementById('person_label_to_id').textContent || '{}');
+
+        let currentChartDimension = 'status';
+
+        function getChartItems(dimension, label) {
+            switch (dimension) {
+                case 'status':
+                    return statusItems[label] || [];
+                case 'category':
+                    return categoryItems[label] || [];
+                case 'department':
+                    return departmentItems[label] || [];
+                case 'location':
+                    return locationItems[label] || [];
+                case 'custodian':
+                    return personItems[label] || [];
+                default:
+                    return [];
+            }
+        }
+
+        function getChartTitle(dimension, label) {
+            switch (dimension) {
+                case 'status':
+                    return `Items with status: ${label}`;
+                case 'category':
+                    return `Items in category: ${label}`;
+                case 'department':
+                    return `Items in department: ${label}`;
+                case 'location':
+                    return `Items in location: ${label}`;
+                case 'custodian':
+                    return `Items assigned to: ${label}`;
+                default:
+                    return 'Items';
+            }
+        }
+
+        function buildGroupUrl(itemType, label) {
+            if (label) {
+                switch (itemType) {
+                    case 'status':
+                        return `/inventory/?status=${encodeURIComponent(statusLabelToCode[label] || label)}`;
+                    case 'category':
+                        return `/inventory/?category=${encodeURIComponent(categoryLabelToId[label] || label)}`;
+                    case 'department':
+                        return `/inventory/?search=${encodeURIComponent(label === 'No Department' ? '' : label)}`;
+                    case 'location':
+                        return `/inventory/?location=${encodeURIComponent(locationLabelToId[label] || label)}`;
+                    case 'custodian':
+                        return `/inventory/?person=${encodeURIComponent(personLabelToId[label] || label)}`;
+                }
+            }
+            switch (itemType) {
+                case 'available':
+                    return '/inventory/?status=available';
+                case 'repair':
+                    return '/inventory/?status=in_repair';
+                case 'expiring':
+                    return '/inventory/?expiring=1';
+                case 'expired':
+                    return '/inventory/?expired=1';
+                default:
+                    return '/inventory/';
+            }
+        }
+
+        function populateItemsModal(itemType, itemLabel) {
+            let items = [];
+            let title = '';
+
+            if (itemLabel) {
+                currentChartDimension = itemType;
+                items = getChartItems(itemType, itemLabel);
+                title = getChartTitle(itemType, itemLabel);
+            } else {
+                switch (itemType) {
+                    case 'available':
+                        items = activeItems;
+                        title = 'Available Items';
+                        break;
+                    case 'repair':
+                        items = inRepairItems;
+                        title = 'Items In Repair';
+                        break;
+                    case 'expiring':
+                        items = expiringItems;
+                        title = 'Retirements Due Soon';
+                        break;
+                    case 'expired':
+                        items = expiredItems;
+                        title = 'Expired Items';
+                        break;
+                }
+            }
+
+            itemsModalTitle.textContent = title;
+            itemsTableBody.innerHTML = '';
+
+            if (items.length === 0) {
+                itemsTableBody.innerHTML = '<tr><td colspan="6" class="text-muted text-center">No items</td></tr>';
+                return;
+            }
+
+            items.forEach(item => {
+                const row = document.createElement('tr');
+                const categoryName = typeof item.category === 'string' ? item.category : (item.category?.name || '—');
+                const locationName = typeof item.location === 'string' ? item.location : (item.location?.name || '—');
+                const statusDisplay = item.status || '—';
+                row.innerHTML = `
+                    <td class="text-center align-middle"><input class="form-check-input item-select-checkbox" type="checkbox" value="${item.id}" aria-label="Select item"></td>
+                    <td class="align-middle"><a href="/inventory/detail/${item.id}/" class="text-decoration-none">${item.name}</a></td>
+                    <td class="align-middle">${categoryName}</td>
+                    <td class="align-middle">${locationName}</td>
+                    <td class="align-middle">${statusDisplay}</td>
+                    <td class="align-middle"><a href="/inventory/?item_id=${encodeURIComponent(item.id)}" class="btn btn-sm btn-outline-primary">View in Inventory</a></td>
+                `;
+                itemsTableBody.appendChild(row);
+            });
+
+            updateSelectionState();
+        }
+
+        function getSelectedItemIds() {
+            return Array.from(itemsTableBody.querySelectorAll('.item-select-checkbox:checked')).map(cb => cb.value);
+        }
+
+        function updateSelectionState() {
+            const selectedIds = getSelectedItemIds();
+            const selectedCount = selectedIds.length;
+            const viewSelectedBtn = document.getElementById('viewSelectedInventoryBtn');
+            if (viewSelectedBtn) {
+                viewSelectedBtn.disabled = selectedCount === 0;
+                viewSelectedBtn.textContent = selectedCount > 0 ? `Edit selected (${selectedCount})` : 'Edit selected';
+            }
+            const selectAll = document.getElementById('selectAllItems');
+            if (selectAll) {
+                const checkboxes = Array.from(itemsTableBody.querySelectorAll('.item-select-checkbox'));
+                if (checkboxes.length === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                } else {
+                    const checkedCount = selectedIds.length;
+                    selectAll.checked = checkedCount === checkboxes.length;
+                    selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+                }
+            }
+        }
+
+        function handleModalButtons(itemType, itemLabel) {
+            const viewGroupBtn = document.getElementById('viewGroupInventoryBtn');
+            const viewSelectedBtn = document.getElementById('viewSelectedInventoryBtn');
+            if (!viewGroupBtn || !viewSelectedBtn) return;
+            viewGroupBtn.href = buildGroupUrl(itemType, itemLabel);
+            viewSelectedBtn.onclick = function() {
+                const selectedIds = getSelectedItemIds();
+                if (selectedIds.length === 0) return;
+                window.location.href = `/inventory/?item_ids=${encodeURIComponent(selectedIds.join(','))}`;
+            };
+        }
+
+        function openChartSegmentModal(dimension, label) {
+            populateItemsModal(dimension, label);
+            handleModalButtons(dimension, label);
+            const itemsModal = new bootstrap.Modal(document.getElementById('itemsModal'));
+            itemsModal.show();
+        }
+
+        document.addEventListener('click', function(e) {
+            const card = e.target.closest('[data-item-type]');
+            if (card) {
+                const itemType = card.getAttribute('data-item-type');
+                populateItemsModal(itemType);
+                handleModalButtons(itemType);
+            }
+        });
+
+        document.addEventListener('change', function(e) {
+            if (e.target.matches('.item-select-checkbox')) {
+                updateSelectionState();
+            }
+            if (e.target.matches('#selectAllItems')) {
+                const checked = e.target.checked;
+                itemsTableBody.querySelectorAll('.item-select-checkbox').forEach(cb => cb.checked = checked);
+                updateSelectionState();
+            }
+        });
+
+        function attachChartClickHandler(chart) {
+            if (!chart) return;
+            chart.options.onClick = function(evt) {
+                const activePoints = chart.getElementsAtEventForMode(evt, 'nearest', { intersect: true }, true);
+                if (!activePoints.length) return;
+                const firstPoint = activePoints[0];
+                const label = chart.data.labels[firstPoint.index];
+                openChartSegmentModal(currentChartDimension, label);
+            };
+        }
+
+
+        function makeChart(canvasId, chartType, labels, data, colors) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return null;
+            if (!labels || labels.length === 0) {
+                canvas.style.display = 'none';
+                canvas.parentElement.innerHTML = '<div class="text-muted text-center py-4">No data available</div>';
+                return null;
+            }
+            return new Chart(canvas, {
+                type: chartType,
+                data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderWidth: 0, barPercentage: 0.85, categoryPercentage: 0.9, barThickness: 'flex', maxBarThickness: 48 }] },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10 } } },
+                    scales: chartType === 'bar' ? {
+                        x: { grid: { display: false }, ticks: { color: '#495057' } },
+                        y: { beginAtZero: true, ticks: { precision: 0, color: '#495057' } }
+                    } : {}
+                }
+            });
+        }
+
+        const statusLabels = JSON.parse(document.getElementById('status_labels').textContent);
+        const statusData = JSON.parse(document.getElementById('status_data').textContent);
+        const categoryLabels = JSON.parse(document.getElementById('category_labels').textContent);
+        const categoryData = JSON.parse(document.getElementById('category_data').textContent);
+        const locationLabels = JSON.parse(document.getElementById('location_labels').textContent);
+        const locationData = JSON.parse(document.getElementById('location_data').textContent);
+        const personLabels = JSON.parse(document.getElementById('person_labels').textContent);
+        const personData = JSON.parse(document.getElementById('person_data').textContent);
+        const departmentLabels = JSON.parse(document.getElementById('department_labels').textContent);
+        const departmentData = JSON.parse(document.getElementById('department_data').textContent);
+
+        let mainChart = null;
+
+        function renderMainChart(dimension, style) {
+            const chartTitle = document.getElementById('mainPieCardTitle');
+            let labels = [];
+            let data = [];
+            let colors = [];
+            let title = 'Item breakdown';
+
+            switch (dimension) {
+                case 'category':
+                    labels = categoryLabels;
+                    data = categoryData;
+                    colors = ['#007bff','#17a2b8','#6f42c1','#fd7e14','#20c997','#6f42c1'];
+                    title = 'Item breakdown by category';
+                    break;
+                case 'department':
+                    labels = departmentLabels;
+                    data = departmentData;
+                    colors = ['#6f42c1','#007bff','#17a2b8','#fd7e14','#20c997','#ffc107'];
+                    title = 'Item breakdown by department';
+                    break;
+                case 'location':
+                    labels = locationLabels;
+                    data = locationData;
+                    colors = ['#0d6efd','#6610f2','#198754','#fd7e14','#0dcaf0','#6c757d'];
+                    title = 'Item breakdown by location';
+                    break;
+                case 'custodian':
+                    labels = personLabels;
+                    data = personData;
+                    colors = ['#20c997','#0d6efd','#6610f2','#fd7e14','#6f42c1','#6c757d'];
+                    title = 'Item breakdown by custodian';
+                    break;
+                default:
+                    labels = statusLabels;
+                    data = statusData;
+                    colors = ['#28a745','#ffc107','#dc3545','#6c757d'];
+                    title = 'Item breakdown by status';
+            }
+
+            chartTitle.textContent = title;
+            if (mainChart) {
+                mainChart.destroy();
+            }
+            currentChartDimension = dimension;
+            mainChart = makeChart('mainPieChart', style, labels, data, colors);
+            attachChartClickHandler(mainChart);
+        }
+
+        function initChart() {
+            const chartTypeSelect = document.getElementById('chartTypeSelect');
+            const chartStyleSelect = document.getElementById('chartStyleSelect');
+
+            function refreshChart() {
+                renderMainChart(chartTypeSelect.value, chartStyleSelect.value);
+            }
+
+            chartTypeSelect?.addEventListener('change', refreshChart);
+            chartStyleSelect?.addEventListener('change', refreshChart);
+
+            renderMainChart('status', 'doughnut');
+        }
+
+        // Initialize chart on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initChart);
+        } else {
+            initChart();
+        }
+    })();
+</script>
+{% endblock %}

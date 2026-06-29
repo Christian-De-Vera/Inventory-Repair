@@ -1,0 +1,117 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block title %}Manage Custom Fields{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-0 text-dark">
+            <i class="bi bi-puzzle text-primary me-2"></i>Manage Custom Fields
+        </h2>
+        <p class="text-muted small mt-1">Add extra fields to your items (warranty, supplier, etc.)</p>
+    </div>
+    {% if perms.inventory.add_customfield %}
+        <a href="{% url 'custom_field_add' %}" class="btn btn-primary shadow-sm">
+            <i class="bi bi-plus-lg me-1"></i> Add Custom Field
+        </a>
+    {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light border-bottom">
+                <tr>
+                    <th class="ps-4">Name</th>
+                    <th>Field Type</th>
+                    <th>Required</th>
+                    <th>Status</th>
+                    <th class="text-end pe-4">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field in custom_fields %}
+                <tr>
+                    <td class="ps-4">
+                        <div>
+                            <strong>{{ field.name }}</strong>
+                            {% if field.help_text %}
+                                <br><small class="text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary">
+                            {{ field.get_field_type_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if field.is_required %}
+                            <span class="badge bg-danger bg-opacity-10 text-danger">Yes</span>
+                        {% else %}
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary">No</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if field.is_active %}
+                            <span class="badge bg-success bg-opacity-10 text-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary bg-opacity-10 text-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                        {% if perms.inventory.change_customfield or perms.inventory.delete_customfield %}
+                            <div class="btn-group shadow-sm">
+                                {% if perms.inventory.change_customfield %}
+                                    <a href="{% url 'custom_field_edit' field.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                {% endif %}
+                                {% if perms.inventory.delete_customfield %}
+                                    <a href="{% url 'custom_field_delete' field.id %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                        <i class="bi bi-trash3"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        {% else %}
+                            <span class="text-muted small">Read only</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="text-center py-5">
+                            <i class="bi bi-puzzle text-muted mb-3 d-block" style="font-size: 3rem;"></i>
+                            <h5 class="fw-bold text-dark">No custom fields yet</h5>
+                            <p class="text-muted mb-4">Create custom fields to add extra information to your items.</p>
+                            {% if perms.inventory.add_customfield %}
+                                <a href="{% url 'custom_field_add' %}" class="btn btn-primary px-4">
+                                    <i class="bi bi-plus-lg me-1"></i> Add Your First Custom Field
+                                </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Info Card -->
+<div class="card border-0 bg-light rounded-4 mt-4">
+    <div class="card-body p-4">
+        <div class="d-flex gap-3">
+            <i class="bi bi-info-circle-fill text-primary fs-3"></i>
+            <div>
+                <h6 class="fw-bold mb-2">About Custom Fields</h6>
+                <p class="text-muted small mb-0">
+                    Custom fields allow you to add any additional information to your items without changing the database structure.
+                    Each custom field will appear automatically on the Add/Edit Item form and on the Item Detail page.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

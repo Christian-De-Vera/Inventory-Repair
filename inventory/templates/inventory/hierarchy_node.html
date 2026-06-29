@@ -1,0 +1,18 @@
+<li>
+    <a href="{% url 'item_detail' item.id %}" class="node-box {% if item.id == target_item.id %}active{% endif %}">
+        <div class="small text-muted" style="font-size: 0.65rem;">{{ item.item_code }}</div>
+        <div class="fw-bold" style="font-size: 0.9rem;">{{ item.name }}</div>
+        <div class="badge {% if item.status == 'available' %}bg-success{% elif item.status == 'in_repair' %}bg-warning{% else %}bg-secondary{% endif %} mt-1" style="font-size: 0.6rem;">
+            {{ item.get_status_display }}
+        </div>
+    </a>
+    {% if item.children.exists %}
+        <ul>
+            {% for child in item.children.all %}
+                {% with item=child %}
+                    {% include "inventory/hierarchy_node.html" %}
+                {% endwith %}
+            {% endfor %}
+        </ul>
+    {% endif %}
+</li>

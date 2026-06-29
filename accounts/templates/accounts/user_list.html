@@ -1,0 +1,104 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block title %}User Roles{% endblock %}
+
+{% block extra_css %}
+<style>
+    .role-badge-admin { background-color: #dc3545; }
+    .role-badge-supply { background-color: #198754; }
+    .role-badge-mis { background-color: #0d6efd; }
+    .role-badge-accountable { background-color: #6f42c1; }
+    .role-badge-custom { background-color: #6c757d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+    <div>
+        <h1 class="h3 fw-bold mb-1">User Roles</h1>
+        <p class="text-muted mb-0">Assign users to Admin, Supply Manager, MIS, or Person Accountable.</p>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+    <div class="table-responsive">
+        <table class="table align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Username</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Roles</th>
+                    <th>Status</th>
+                    <th class="text-end" style="width: 180px;">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user_obj in users %}
+                    <tr>
+                        <td class="fw-semibold">{{ user_obj.username }}</td>
+                        <td>{{ user_obj.get_full_name|default:'-' }}</td>
+                        <td>{{ user_obj.email|default:'-' }}</td>
+                        <td>
+                            {% if user_obj.is_custom_role %}
+                                <span class="badge role-badge-custom me-1">Custom</span>
+                            {% endif %}
+                            {% for group in user_obj.groups.all %}
+                                {% if group.name == 'Admin' %}
+                                    <span class="badge role-badge-admin me-1">{{ group.name }}</span>
+                                {% elif group.name == 'Supply Manager' %}
+                                    <span class="badge role-badge-supply me-1">{{ group.name }}</span>
+                                {% elif group.name == 'MIS' %}
+                                    <span class="badge role-badge-mis me-1">{{ group.name }}</span>
+                                {% elif group.name == 'Person Accountable' %}
+                                    <span class="badge role-badge-accountable me-1">{{ group.name }}</span>
+                                {% else %}
+                                    <span class="badge text-bg-secondary me-1">{{ group.name }}</span>
+                                {% endif %}
+                            {% empty %}
+                                <span class="text-muted">No roles</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% if user_obj.is_active %}
+                                <span class="badge text-bg-success">Active</span>
+                            {% else %}
+                                <span class="badge text-bg-danger">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'account_user_roles' user_obj.pk %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-sliders me-1"></i>Manage
+                            </a>
+                            {% if request.user != user_obj %}
+                            <button type="button" class="btn btn-sm btn-outline-danger ms-1"
+                                    data-delete-url="{% url 'account_user_delete' user_obj.pk %}"
+                                    data-username="{{ user_obj.username }}"
+                                    onclick="confirmDeleteUser(this)">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">No users found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function confirmDeleteUser(btn) {
+        const username = btn.dataset.username;
+        const url = btn.dataset.deleteUrl;
+        if (confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+            window.location.href = url;
+        }
+    }
+</script>
+{% endblock %}

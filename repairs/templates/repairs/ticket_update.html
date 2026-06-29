@@ -1,0 +1,188 @@
+{% extends 'repairs/repair_base.html' %}
+
+{% block title %}Update Ticket {{ ticket.ticket_number }}{% endblock %}
+
+{% block content %}
+<style>
+    :root { 
+        --bs-primary: #0d9488 !important; 
+    }
+    .btn-primary, .bg-primary { background-color: #0d9488 !important; border-color: #0d9488 !important; }
+    .btn-primary:hover { background-color: #0f766e !important; }
+    .text-primary { color: #0d9488 !important; }
+    .border-primary { border-color: #0d9488 !important; }
+
+    /* Navigation Overrides */
+    nav, .navbar, .navbar.bg-primary { background-color: #0d9488 !important; }
+    .navbar-brand, .nav-link { color: #ffffff !important; }
+    .navbar .nav-link:hover { opacity: 0.8; }
+</style>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white py-3 rounded-top-4">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-pencil-square me-2"></i>Update Repair Ticket</h5>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post" id="ticketUpdateForm">
+                        {% csrf_token %}
+                        
+                        <!-- Hidden flag for decommissioning item status sync -->
+                        <input type="hidden" name="decommission_item" id="decommission_item" value="true">
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">STATUS</label>
+                                <select name="status" class="form-select">
+                                    {% for code, label in status_choices %}
+                                    <option value="{{ code }}" {% if ticket.status == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">PRIORITY</label>
+                                <select name="priority" class="form-select">
+                                    {% for code, label in priority_choices %}
+                                    <option value="{{ code }}" {% if ticket.priority == code %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">ASSIGNED TECHNICIAN</label>
+                                <div class="input-group">
+                                    <select name="assigned_to" id="assigned_to" class="form-select">
+                                        <option value="">-- Unassigned --</option>
+                                        {% for person in persons %}
+                                        <option value="{{ person.id }}" {% if ticket.assigned_to.id == person.id %}selected{% endif %}>{{ person.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addPersonModal" title="Quick Add Person">
+                                        <i class="bi bi-person-plus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold small text-muted">ACTUAL REPAIR COST (₱)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light">₱</span>
+                                    <input type="number" name="actual_cost" step="0.01" class="form-control" value="{{ ticket.actual_cost|stringformat:".2f" }}">
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold small text-muted">RESOLUTION NOTES (FINAL)</label>
+                                <textarea name="resolution_notes" class="form-control" rows="3">{{ ticket.resolution_notes }}</textarea>
+                            </div>
+                            
+                            <hr class="my-2">
+                            
+                            <div class="col-12">
+                                <label class="form-label fw-bold text-primary"><i class="bi bi-chat-left-text me-2"></i>PROGRESS UPDATE (LOG NOTE)</label>
+                                <textarea name="log_note" class="form-control border-primary" rows="2" placeholder="Describe the work done in this update (e.g. 'Waiting for parts', 'Motherboard cleaned')"></textarea>
+                                <div class="form-text">This will be added to the chronological history for auditing.</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex justify-content-between">
+                            <a href="{% url 'repairs:ticket_detail' ticket.pk %}" class="btn btn-light border">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-4">Update & Log Action</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Person (Quick Add) -->
+<div class="modal fade" id="addPersonModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Add New Person</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="personModalAlert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
+                    <input type="text" id="newPersonName" class="form-control" placeholder="e.g., Juan Dela Cruz">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email (Optional)</label>
+                    <input type="email" id="newPersonEmail" class="form-control" placeholder="juan@example.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Department (Optional)</label>
+                    <input type="text" id="newPersonDepartment" class="form-control" placeholder="e.g., IT Department">
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="savePersonBtn">Add Person</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Prompt for decommissioning if status is changed to Unrepairable
+    const form = document.getElementById('ticketUpdateForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const statusSelect = document.querySelector('select[name="status"]');
+            const decommissionInput = document.getElementById('decommission_item');
+            
+            if (statusSelect && statusSelect.value === 'unrepairable') {
+                const confirmDecommission = confirm("You are marking this ticket as 'Unrepairable'.\n\nWould you like to automatically update the inventory item status to 'Decommissioned'?");
+                if (decommissionInput) {
+                    decommissionInput.value = confirmDecommission;
+                }
+            }
+        });
+    }
+
+    const savePersonBtn = document.getElementById('savePersonBtn');
+    if (savePersonBtn) {
+        savePersonBtn.addEventListener('click', function() {
+            const name = document.getElementById('newPersonName').value.trim();
+            const email = document.getElementById('newPersonEmail').value.trim();
+            const department = document.getElementById('newPersonDepartment').value.trim();
+            
+            if (!name) {
+                alert("Please enter a name.");
+                return;
+            }
+            
+            fetch("{% url 'quick_add_person' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({ name: name, email: email, department: department })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const select = document.getElementById('assigned_to');
+                    if (select) {
+                        select.appendChild(new Option(data.name, data.id, true, true));
+                    }
+                    bootstrap.Modal.getInstance(document.getElementById('addPersonModal')).hide();
+                    document.getElementById('newPersonName').value = '';
+                    document.getElementById('newPersonEmail').value = '';
+                    document.getElementById('newPersonDepartment').value = '';
+                } else {
+                    alert(data.error || "An error occurred");
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

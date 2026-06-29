@@ -1,0 +1,115 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block title %}Hierarchy - {{ root.name }}{% endblock %}
+
+{% block content %}
+<style>
+    .tree-container {
+        overflow-x: auto;
+        padding: 2rem;
+        background: #f8f9fa;
+        border-radius: 1rem;
+        min-height: 400px;
+    }
+    .tree, .tree ul, .tree li {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        position: relative;
+    }
+    .tree {
+        margin: 0 0 1em;
+        text-align: center;
+    }
+    .tree li {
+        display: inline-block;
+        vertical-align: top;
+        text-align: center;
+        padding: 1em .5em 0 .5em;
+    }
+    .tree li::before, .tree li::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 50%;
+        border-top: 2px solid #ccc;
+        width: 50%;
+        height: 1em;
+    }
+    .tree li::after {
+        right: auto;
+        left: 50%;
+        border-left: 2px solid #ccc;
+    }
+    .tree li:only-child::after, .tree li:only-child::before {
+        display: none;
+    }
+    .tree li:only-child {
+        padding-top: 0;
+    }
+    .tree li:first-child::before, .tree li:last-child::after {
+        border: 0 none;
+    }
+    .tree li:last-child::before {
+        border-right: 2px solid #ccc;
+        border-radius: 0 5px 0 0;
+    }
+    .tree li:first-child::after {
+        border-radius: 5px 0 0 0;
+    }
+    .tree ul::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        border-left: 2px solid #ccc;
+        width: 0;
+        height: 1em;
+    }
+    .tree .node-box {
+        display: inline-block;
+        padding: 0.75rem 1.25rem;
+        text-decoration: none;
+        color: #333;
+        background-color: #fff;
+        border: 2px solid #dee2e6;
+        border-radius: 0.5rem;
+        transition: all 0.2s;
+        min-width: 160px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    .tree .node-box:hover {
+        border-color: #0d6efd;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    .tree .node-box.active {
+        border-color: #0d6efd;
+        background-color: #f0f7ff;
+        border-width: 3px;
+    }
+</style>
+
+<div class="mb-4">
+    <a href="{% url 'item_detail' target_item.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Back to Item Details
+    </a>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+    <div class="card-header bg-white border-bottom py-3">
+        <h4 class="mb-0 fw-bold text-primary"><i class="bi bi-diagram-3 me-2"></i>Full Kit Hierarchy Diagram</h4>
+    </div>
+    <div class="card-body p-0">
+        <div class="tree-container">
+            <div class="tree">
+                <ul>
+                    {% with item=root %}
+                        {% include "inventory/hierarchy_node.html" %}
+                    {% endwith %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,4 +1,5 @@
-{% extends 'inventory/base.html' %}
+{% extends 'inventory/inventory_base.html' %}
+{% load humanize %}
 
 {% block title %}Item List{% endblock %}
 
@@ -8,16 +9,11 @@
         <h2 class="fw-bold mb-0 text-dark"><i class="bi bi-box-seam text-primary me-2"></i>ICT Supply Inventory</h2>
         <p class="text-muted small mb-0">Manage and track your equipment, statuses, and locations.</p>
     </div>
-    <div class="d-flex gap-2">
-        <!-- Bulk Edit Button -->
-        <button type="button" class="btn btn-outline-primary shadow-sm px-4" id="bulkActionBtn" disabled>
-            <i class="bi bi-pencil-square me-1"></i> Bulk Edit
-        </button>
-        
+    {% if perms.inventory.add_item %}
         <a href="{% url 'item_add' %}" class="btn btn-primary shadow-sm px-4">
             <i class="bi bi-plus-lg me-1"></i> Add New Item
         </a>
-    </div>
+    {% endif %}
 </div>
 
 <!-- Search, Sort, and Filter Bar -->
@@ -26,7 +22,7 @@
         <form method="get" id="searchSortForm">
             <div class="row g-3">
                 <!-- Search Input -->
-                <div class="col-12 col-md-5 col-lg-4">
+                <div class="col-12 col-lg-4">
                     <label class="form-label fw-semibold small text-muted">
                         <i class="bi bi-search"></i> SEARCH
                     </label>
@@ -38,11 +34,11 @@
                                placeholder="Search by name, description, location..." 
                                value="{{ search_query }}">
                     </div>
-                    <div class="form-text text-muted small mt-2">Searches name, description, location & category</div>
+                    <div class="form-text text-muted small mt-2 d-none d-md-block">Searches name, description, department, location & category</div>
                 </div>
                 
                 <!-- Sort Dropdown with Reverse Toggle -->
-                <div class="col-12 col-md-4 col-lg-3">
+                <div class="col-12 col-md-6 col-lg-3">
                     <label class="form-label fw-semibold small text-muted">
                         <i class="bi bi-arrow-up-down"></i> SORT BY
                     </label>
@@ -51,11 +47,13 @@
                             <option value="created_at" {% if current_sort == 'created_at' %}selected{% endif %}>📅 Date Created</option>
                             <option value="name" {% if current_sort == 'name' %}selected{% endif %}>🔤 Name</option>
                             <option value="category" {% if current_sort == 'category' %}selected{% endif %}>📁 Category</option>
+                            <option value="department" {% if current_sort == 'department' %}selected{% endif %}>🏢 Department</option>
                             <option value="status" {% if current_sort == 'status' %}selected{% endif %}>✅ Status</option>
                             <option value="location" {% if current_sort == 'location' %}selected{% endif %}>📍 Location</option>
                             <option value="person" {% if current_sort == 'person' %}selected{% endif %}>👤 Person</option>
                             <option value="acquisition_date" {% if current_sort == 'acquisition_date' %}selected{% endif %}>📅 Acquisition Date</option>
                             <option value="acquisition_cost" {% if current_sort == 'acquisition_cost' %}selected{% endif %}>💰 Acquisition Cost</option>
+                            <option value="kit_type" {% if current_sort == 'kit_type' %}selected{% endif %}>📦 Kit/Part Status</option>
                         </select>
                         
                         <!-- Reverse toggle button -->
@@ -66,31 +64,63 @@
                     </div>
                 </div>
                 
-                <!-- Group By Dropdown -->
-                <div class="col-12 col-md-3 col-lg-2">
-                    <label class="form-label fw-semibold small text-muted">
-                        <i class="bi bi-folder2-open"></i> GROUP BY
-                    </label>
-                    <select name="group_by" class="form-select" id="groupBySelect">
-                        <option value="none" {% if group_by == 'none' %}selected{% endif %}>No Grouping</option>
-                        <option value="name" {% if group_by == 'name' %}selected{% endif %}>📦 By Name</option>
-                        <option value="category" {% if group_by == 'category' %}selected{% endif %}>📁 By Category</option>
-                        <option value="location" {% if group_by == 'location' %}selected{% endif %}>📍 By Location</option>
-                        <option value="status" {% if group_by == 'status' %}selected{% endif %}>✅ By Status</option>
-                        <option value="person" {% if group_by == 'person' %}selected{% endif %}>👤 By Person Accountable</option>
-                        <option value="acquisition_date" {% if group_by == 'acquisition_date' %}selected{% endif %}>📅 By Acquisition Month</option>
-                    </select>
+                <!-- Grouping Controls -->
+                <div class="col-12 col-md-6 col-lg-5">
+                    <div class="row g-2">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label fw-semibold small text-muted">
+                                <i class="bi bi-folder2-open"></i> GROUP BY
+                            </label>
+                            <select name="primary_group" class="form-select" id="primaryGroupSelect">
+                                <option value="none" {% if primary_group == 'none' %}selected{% endif %}>No Grouping</option>
+                                <option value="name" {% if primary_group == 'name' %}selected{% endif %}>📦 Name</option>
+                                <option value="category" {% if primary_group == 'category' %}selected{% endif %}>📁 Category</option>
+                                <option value="department" {% if primary_group == 'department' %}selected{% endif %}>🏢 Department</option>
+                                <option value="location" {% if primary_group == 'location' or not primary_group %}selected{% endif %}>📍 Location</option>
+                                <option value="status" {% if primary_group == 'status' %}selected{% endif %}>✅ Status</option>
+                                <option value="person" {% if primary_group == 'person' %}selected{% endif %}>👤 Person Accountable</option>
+                                <option value="kit_type" {% if primary_group == 'kit_type' %}selected{% endif %}>📦 Kit/Part Status</option>
+                                <option value="acquisition_date" {% if primary_group == 'acquisition_date' %}selected{% endif %}>📅 Acquisition Month</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-sm-6" id="secondaryGroupContainer" style="{% if primary_group == 'none' %}display: none;{% endif %}">
+                            <label class="form-label fw-semibold small text-muted">
+                                <i class="bi bi-folder2"></i> THEN BY
+                            </label>
+                            <select name="secondary_group" class="form-select" id="secondaryGroupSelect">
+                                <option value="none" {% if secondary_group == 'none' %}selected{% endif %}>None</option>
+                                <option value="name" {% if secondary_group == 'name' %}selected{% endif %}>📦 Name</option>
+                                <option value="category" {% if secondary_group == 'category' %}selected{% endif %}>📁 Category</option>
+                                <option value="department" {% if secondary_group == 'department' %}selected{% endif %}>🏢 Department</option>
+                                <option value="location" {% if secondary_group == 'location' %}selected{% endif %}>📍 Location</option>
+                                <option value="status" {% if secondary_group == 'status' %}selected{% endif %}>✅ Status</option>
+                                <option value="person" {% if secondary_group == 'person' %}selected{% endif %}>👤 Person Accountable</option>
+                                <option value="kit_type" {% if secondary_group == 'kit_type' %}selected{% endif %}>📦 Kit/Part Status</option>
+                                <option value="acquisition_date" {% if secondary_group == 'acquisition_date' %}selected{% endif %}>📅 Acquisition Month</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Filter Button -->
-                <div class="col-12 col-md-12 col-lg-3">
-                    <label class="form-label fw-semibold small text-muted d-none d-lg-block">&nbsp;</label>
-                    <button type="button" class="btn btn-outline-secondary w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#filterModal">
-                        <i class="bi bi-funnel me-1"></i> Filters
-                        {% if status_filter or category_filter or location_filter or person_filter %}
-                            <span class="badge bg-primary ms-1">Active</span>
-                        {% endif %}
-                    </button>
+                <div class="col-12 col-md-12 col-lg-12">
+                    <div class="row g-2">
+                        <div class="col-12 col-md-10">
+                            <label class="form-label fw-semibold small text-muted d-none d-md-block">&nbsp;</label>
+                            <button type="button" class="btn btn-outline-secondary w-100 shadow-sm" data-bs-toggle="modal" data-bs-target="#filterModal">
+                                <i class="bi bi-funnel me-1"></i> Filters
+                                {% if status_filter or category_filter or location_filter or person_filter or kit_filter %}
+                                    <span class="badge bg-primary ms-1">Active</span>
+                                {% endif %}
+                            </button>
+                        </div>
+                        <div class="col-12 col-md-2">
+                            <label class="form-label fw-semibold small text-muted d-none d-md-block">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100 shadow-sm">
+                                <i class="bi bi-check-circle me-1"></i> Apply
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Hidden inputs to preserve filter values -->
@@ -98,31 +128,18 @@
                 <input type="hidden" name="category" value="{{ category_filter }}">
                 <input type="hidden" name="location" value="{{ location_filter }}">
                 <input type="hidden" name="person" value="{{ person_filter }}">
-            </div>
-            
-            <hr class="text-muted opacity-25 mt-4 mb-3">
-            
-            <!-- Action Buttons Row -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="d-flex justify-content-end gap-2">
-                        {% if search_query or status_filter or category_filter or location_filter or person_filter %}
-                            <a href="{% url 'item_list' %}" class="btn btn-outline-danger shadow-sm">
-                                <i class="bi bi-x-circle me-1"></i> Clear All
-                            </a>
-                        {% endif %}
-                        <button type="submit" class="btn btn-primary px-4 shadow-sm">
-                            <i class="bi bi-check-circle me-1"></i> Apply
-                        </button>
-                    </div>
-                </div>
+                <input type="hidden" name="item_id" value="{{ item_id_filter }}">
+                <input type="hidden" name="item_ids" value="{{ item_ids }}">
+                <input type="hidden" name="expiring" value="{{ expiring_filter|yesno:'1,' }}">
+                <input type="hidden" name="expired" value="{{ expired_filter|yesno:'1,' }}">
+                <input type="hidden" name="kit_filter" value="{{ kit_filter }}">
             </div>
         </form>
     </div>
 </div>
 
 <!-- Active Filters Display -->
-{% if status_filter or category_filter or location_filter or person_filter %}
+{% if status_filter or category_filter or location_filter or person_filter or item_id_filter or item_ids or expiring_filter or expired_filter or kit_filter %}
 <div class="alert alert-light border rounded-3 mb-4 shadow-sm">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div>
@@ -160,6 +177,28 @@
                     {% endfor %}
                 </span>
             {% endif %}
+            {% if kit_filter %}
+                <span class="badge bg-secondary ms-2">
+                    Type: 
+                    {% if kit_filter == 'kits' %}Kits Only
+                    {% elif kit_filter == 'parts' %}Parts Only
+                    {% else %}Standalone Only{% endif %}
+                </span>
+            {% endif %}
+            {% if item_id_filter %}
+                <span class="badge bg-secondary ms-2">
+                    Item ID: {{ item_id_filter }}
+                </span>
+            {% endif %}
+            {% if item_ids %}
+                <span class="badge bg-secondary ms-2">Selected Items</span>
+            {% endif %}
+            {% if expiring_filter %}
+                <span class="badge bg-secondary ms-2">Retirements Due Soon</span>
+            {% endif %}
+            {% if expired_filter %}
+                <span class="badge bg-secondary ms-2">Expired</span>
+            {% endif %}
         </div>
         <a href="{% url 'item_list' %}" class="text-decoration-none small text-danger fw-medium">
             <i class="bi bi-x-circle"></i> Clear Filters
@@ -183,10 +222,46 @@
 </div>
 {% endif %}
 
+<!-- Selected Count and Bulk Edit Bar -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 p-3 bg-white rounded-4 shadow-sm gap-3">
+    <div class="d-flex align-items-center gap-3 justify-content-between justify-content-md-start">
+        {% if perms.inventory.change_item or perms.inventory.delete_item %}
+            <div class="form-check mb-0">
+                <input type="checkbox" id="selectAllGlobal" class="form-check-input" title="Select All Items Across All Groups">
+            </div>
+            <div><i class="bi bi-check2-square text-primary me-2"></i><span id="selectedCountDisplay" class="fw-semibold"><span id="selectedCountNumber">0</span> selected</span></div>
+        {% else %}
+            <div class="text-muted small"><i class="bi bi-eye me-1"></i> Read-only access</div>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2 justify-content-center">
+        {% if perms.inventory.delete_item %}
+            <button type="button" class="btn btn-outline-danger shadow-sm px-3" id="deleteSelectedBtn" disabled>
+                <i class="bi bi-trash3"></i> Delete Selected
+            </button>
+        {% endif %}
+        <button type="button" class="btn btn-outline-secondary shadow-sm px-4" id="toggleColumnsBtn"><i class="bi bi-layout-three-columns me-1"></i> Columns</button>
+        {% if perms.inventory.change_item %}
+            <button type="button" class="btn btn-primary shadow-sm px-4" id="bulkActionBtn" disabled><i class="bi bi-pencil-square me-1"></i> Bulk Edit (<span id="bulkCount">0</span>)</button>
+        {% endif %}
+    </div>
+</div>
+
 <!-- Results Count -->
 <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-    <div class="text-muted small">
-        <i class="bi bi-info-circle"></i> Found <strong>{{ total_items }}</strong> total item(s)
+    <div class="d-flex align-items-center">
+        <div class="bg-white border rounded-start-pill px-3 py-1 text-secondary small border-end-0 shadow-sm">
+            <i class="bi bi-search me-1"></i> Found <strong>{{ total_items }}</strong> items
+        </div>
+        {% if perms.inventory.view_item %}
+            <a href="{% url 'export_items_csv' %}?{{ request.GET.urlencode }}"
+               id="exportActionBtn"
+               class="btn btn-sm btn-success rounded-end-pill shadow-sm px-3"
+               data-bs-toggle="tooltip"
+               title="Download all {{ total_items }} filtered results as a CSV file">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Results
+            </a>
+        {% endif %}
     </div>
     <div class="text-muted small">
         <i class="bi bi-arrow-repeat"></i> Sorted by: 
@@ -206,116 +281,287 @@
 
 <!-- Items Display -->
 {% if grouped_items %}
-    <!-- Grouped View -->
+    <!-- Nested Grouped View -->
     <div class="accordion" id="groupedAccordion">
-        {% for group_name, group_items in grouped_items.items %}
+        {% for primary_name, primary_data in grouped_items.items %}
         <div class="card border-0 shadow-sm rounded-4 mb-3 overflow-hidden">
             <div class="accordion-header">
-                <button class="btn btn-light w-100 text-start d-flex justify-content-between align-items-center p-3" 
+                <button class="btn btn-light w-100 text-start d-flex justify-content-between align-items-center p-3 py-4" 
                         type="button" 
                         data-bs-toggle="collapse" 
-                        data-bs-target="#collapse{{ forloop.counter }}" 
+                        data-bs-target="#collapsePrimary{{ forloop.counter }}" 
                         aria-expanded="true">
                     <div>
                         <i class="bi bi-folder-fill text-warning me-2"></i>
-                        <strong class="fs-5">{{ group_name }}</strong>
-                        <span class="badge bg-secondary ms-2">{{ group_items|length }} item(s)</span>
+                        <strong class="fs-5">{{ primary_name }}</strong>
+                        {% if secondary_group != 'none' %}
+                            <span class="badge bg-secondary ms-2">{{ primary_data.subgroups|length }} subgroup(s)</span>
+                        {% else %}
+                            <span class="badge bg-secondary ms-2">{{ primary_data.items|length }} item(s)</span>
+                        {% endif %}
                     </div>
                     <i class="bi bi-chevron-down"></i>
                 </button>
             </div>
-            <div id="collapse{{ forloop.counter }}" class="collapse show" data-bs-parent="#groupedAccordion">
+            <div id="collapsePrimary{{ forloop.counter }}" class="collapse show" data-bs-parent="#groupedAccordion">
                 <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
-                            <thead class="table-light border-bottom">
-                                <tr>
-                                    <th scope="col" class="ps-4">
-                                        <input type="checkbox" class="form-check-input group-checkbox" data-group="{{ group_name }}">
-                                    </th>
-                                    <th scope="col">Item</th>
-                                    <th scope="col">Category</th>
-                                    <th scope="col">Quantity</th>
-                                    <th scope="col">Location</th>
-                                    <th scope="col">Status</th>
-                                    <th scope="col">Acquisition Date</th>
-                                    <th scope="col">End of Life</th>
-                                    <th scope="col">Unit Cost</th>
-                                    <th scope="col" class="text-end pe-4">Details</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in group_items %}
-                                <tr class="card-hover">
-                                    <td class="ps-4">
-                                        <input type="checkbox" value="{{ item.id }}" class="form-check-input item-checkbox" data-group="{{ group_name }}">
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center gap-3">
-                                            {% if item.image %}
-                                                <img src="{{ item.image.url }}" alt="{{ item.name }}" class="thumbnail-img border">
-                                            {% else %}
-                                                <div class="thumbnail-img bg-light border d-flex align-items-center justify-content-center text-muted">
-                                                    <i class="bi bi-image"></i>
-                                                </div>
-                                            {% endif %}
-                                            <a href="{% url 'item_detail' item.id %}" class="text-decoration-none fw-bold text-dark d-block">
-                                                {{ item.name }}
-                                            </a>
+                    {% if secondary_group != 'none' and primary_data.subgroups %}
+                        <!-- Nested Groups (Subgroups) -->
+                        <div class="accordion" id="subAccordion{{ forloop.counter }}">
+                            {% for sub_name, sub_items in primary_data.subgroups.items %}
+                            <div class="card border-0 rounded-0">
+                                <div class="accordion-header bg-light">
+                                    <button class="btn btn-light w-100 text-start d-flex justify-content-between align-items-center p-3 ps-4" 
+                                            type="button" 
+                                            data-bs-toggle="collapse" 
+                                            data-bs-target="#collapseSub{{ forloop.parentloop.counter }}{{ forloop.counter }}" 
+                                            aria-expanded="true">
+                                        <div>
+                                            <i class="bi bi-folder text-info me-2"></i>
+                                            <span class="fw-semibold">{{ sub_name }}</span>
+                                            <span class="badge bg-secondary ms-2">{{ sub_items|length }} item(s)</span>
                                         </div>
-                                     </td>
-                                    <td>
-                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border">
-                                            {{ item.category.name|default:"Uncategorized" }}
-                                        </span>
-                                     </td>
-                                    <td>
-                                        <span class="fw-semibold">
-                                            <i class="bi bi-hash me-1"></i> x{{ item.quantity }}
-                                        </span>
-                                     </td>
-                                    <td>
-                                        <i class="bi bi-geo-alt text-muted me-1"></i>
-                                        <span class="badge bg-info bg-opacity-10 text-info border">
-                                            {{ item.location.name|default:"No Location" }}
-                                        </span>
-                                     </td>
-                                    <td>
-                                        <span class="status-badge status-{{ item.status }}">
-                                            {{ item.get_status_display }}
-                                        </span>
-                                     </td>
-                                    <td class="text-muted">{{ item.acquisition_date|date:"M d, Y"|default:"—" }}</td>
-                                    <td>
-                                        {% if item.end_of_life_date %}
-                                            {% if item.is_expired %}
-                                                <span class="badge bg-danger">
-                                                    <i class="bi bi-calendar-x"></i> Expired
-                                                </span>
-                                            {% elif item.is_expiring_soon %}
-                                                <span class="badge bg-warning text-dark">
-                                                    <i class="bi bi-calendar-exclamation"></i> {{ item.get_days_until_eol }} days left
+                                        <i class="bi bi-chevron-down"></i>
+                                    </button>
+                                </div>
+                                <div id="collapseSub{{ forloop.parentloop.counter }}{{ forloop.counter }}" class="collapse show">
+                                    <div class="card-body p-0">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover align-middle mb-0">
+                                                <thead class="table-light border-bottom">
+                                                    <tr>
+                                                        <th scope="col" class="ps-4">
+                                                            <input type="checkbox" class="form-check-input group-checkbox" data-group="{{ primary_name }}|{{ sub_name }}">
+                                                        </th>
+                                                        <th scope="col" class="item-col">Item</th>
+                                                        <th scope="col" class="serial-col d-none d-xl-table-cell">Serial No</th>
+                                                        <th scope="col" class="category-col d-none d-md-table-cell">Category</th>
+                                                        <th scope="col" class="department-col d-none d-lg-table-cell">Department</th>
+                                                        <th scope="col" class="quantity-col d-none d-md-table-cell">Quantity</th>
+                                                        <th scope="col" class="location-col d-none d-sm-table-cell">Location</th>
+                                                        <th scope="col" class="status-col">Status</th>
+                                                        <th scope="col" class="person-col d-none d-xl-table-cell">Person</th>
+                                                        <th scope="col" class="acquisition-date-col d-none d-lg-table-cell">Acquisition</th>
+                                                        <th scope="col" class="eol-col d-none d-lg-table-cell">EOL</th>
+                                                        <th scope="col" class="unit-cost-col d-none d-md-table-cell">Cost</th>
+                                                        <th scope="col" class="text-end pe-4 details-col">Details</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for item in sub_items %}
+                                                    <tr class="card-hover">
+                                                        <td class="ps-4">
+                                                            <input type="checkbox" value="{{ item.id }}" class="form-check-input item-checkbox" data-group="{{ primary_name }}|{{ sub_name }}" {% if item.active_tickets %}data-has-ticket="true"{% endif %} data-is-kit="{{ item.is_kit|yesno:'true,false' }}">
+                                                        </td>
+                                                        <td class="item-col">
+                                                            <div class="d-flex align-items-center gap-3">
+                                                                {% if item.image %}
+                                                                    <img src="{{ item.image.url }}" alt="{{ item.name }}" class="thumbnail-img border">
+                                                                {% else %}
+                                                                    <div class="thumbnail-img bg-light border d-flex align-items-center justify-content-center text-muted">
+                                                                        <i class="bi bi-image"></i>
+                                                                    </div>
+                                                                {% endif %}
+                                                                <a href="{% url 'item_detail' item.id %}" class="text-decoration-none fw-bold text-dark d-block">
+                                                                    {{ item.name }}
+                                                                </a>
+                                                                {% if item.is_kit %}
+                                                                    <span class="badge bg-dark text-white tiny-badge" title="Parent Kit"><i class="bi bi-box-seam me-1"></i>Kit</span>
+                                                                {% elif item.is_component %}
+                                                                    <span class="badge bg-light text-dark border tiny-badge" title="Component"><i class="bi bi-link-45deg me-1"></i>Part</span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </td>
+                                                        <td class="serial-col d-none d-xl-table-cell">{{ item.serial_no|default:"—" }}</td>
+                                                        <td class="category-col d-none d-md-table-cell">
+                                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border">
+                                                                {{ item.category.name|default:"Uncategorized" }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="department-col d-none d-lg-table-cell">
+                                                            {% if item.department %}
+                                                                <span class="badge bg-primary bg-opacity-10 text-primary border">
+                                                                    {{ item.department }}
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="text-muted">—</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="quantity-col d-none d-md-table-cell">
+                                                            <span class="fw-semibold">
+                                                                <i class="bi bi-hash me-1"></i> x{{ item.quantity }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="location-col d-none d-sm-table-cell">
+                                                            <i class="bi bi-geo-alt text-muted me-1"></i>
+                                                            <span class="badge bg-info bg-opacity-10 text-info border">
+                                                                {{ item.location.name|default:"No Location" }}
+                                                            </span>
+                                                        </td>
+                                                        <td class="status-col">
+                                                            <span class="status-badge status-{{ item.status }}">
+                                                                {{ item.get_status_display }}
+                                                            </span>
+                                                            {% if item.active_tickets %}
+                                                                <i class="bi bi-lock-fill text-muted ms-1" title="Status managed by active Repair Ticket"></i>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="person-col d-none d-xl-table-cell">
+                                                            {% if item.person_accountable %}
+                                                                <span class="badge bg-success bg-opacity-10 text-success border">
+                                                                    <i class="bi bi-person me-1"></i>{{ item.person_accountable.name }}
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="text-muted">—</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="acquisition-date-col d-none d-lg-table-cell">{{ item.acquisition_date|date:"M d, Y"|default:"—" }}</td>
+                                                        <td class="eol-col d-none d-lg-table-cell">
+                                                            {% if item.end_of_life_date %}
+                                                                {% if item.is_expired %}
+                                                                    <span class="badge bg-danger">Expired</span>
+                                                                {% elif item.is_expiring_soon %}
+                                                                    <span class="badge bg-warning text-dark">{{ item.get_days_until_eol }} days left</span>
+                                                                {% else %}
+                                                                    <span class="badge bg-success">{{ item.end_of_life_date|date:"M d, Y" }}</span>
+                                                                {% endif %}
+                                                            {% else %}
+                                                                <span class="text-muted">—</span>
+                                                            {% endif %}
+                                                        </td>
+                                                        <td class="unit-cost-col d-none d-md-table-cell">{% if item.acquisition_cost %}₱{{ item.acquisition_cost|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+                                                        <td class="text-end pe-4 details-col">
+                                                            <a href="{% url 'item_detail' item.id %}" class="btn btn-sm btn-outline-info" title="View Details">
+                                                                <i class="bi bi-eye"></i> Details
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <!-- No subgroups - direct items -->
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light border-bottom">
+                                    <tr>
+                                        <th scope="col" class="ps-4">
+                                            <input type="checkbox" class="form-check-input group-checkbox" data-group="{{ primary_name }}">
+                                        </th>
+                                        <th scope="col" class="item-col">Item</th>
+                                        <th scope="col" class="serial-col d-none d-xl-table-cell">Serial No</th>
+                                        <th scope="col" class="category-col d-none d-md-table-cell">Category</th>
+                                        <th scope="col" class="department-col d-none d-lg-table-cell">Department</th>
+                                        <th scope="col" class="quantity-col d-none d-md-table-cell">Quantity</th>
+                                        <th scope="col" class="location-col d-none d-sm-table-cell">Location</th>
+                                        <th scope="col" class="status-col">Status</th>
+                                        <th scope="col" class="person-col d-none d-xl-table-cell">Person</th>
+                                        <th scope="col" class="acquisition-date-col d-none d-lg-table-cell">Acquisition</th>
+                                        <th scope="col" class="eol-col d-none d-lg-table-cell">EOL</th>
+                                        <th scope="col" class="unit-cost-col d-none d-md-table-cell">Cost</th>
+                                        <th scope="col" class="text-end pe-4 details-col">Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in primary_data.items %}
+                                    <tr class="card-hover">
+                                        <td class="ps-4">
+                                            <input type="checkbox" value="{{ item.id }}" class="form-check-input item-checkbox" data-group="{{ primary_name }}" {% if item.active_tickets %}data-has-ticket="true"{% endif %} data-is-kit="{{ item.is_kit|yesno:'true,false' }}">
+                                        </td>
+                                        <td class="item-col">
+                                            <div class="d-flex align-items-center gap-3">
+                                                {% if item.image %}
+                                                    <img src="{{ item.image.url }}" alt="{{ item.name }}" class="thumbnail-img border">
+                                                {% else %}
+                                                    <div class="thumbnail-img bg-light border d-flex align-items-center justify-content-center text-muted">
+                                                        <i class="bi bi-image"></i>
+                                                    </div>
+                                                {% endif %}
+                                                <a href="{% url 'item_detail' item.id %}" class="text-decoration-none fw-bold text-dark d-block">
+                                                    {{ item.name }}
+                                                </a>
+                                                {% if item.is_kit %}
+                                                    <span class="badge bg-dark text-white tiny-badge" title="Parent Kit"><i class="bi bi-box-seam me-1"></i>Kit</span>
+                                                {% elif item.is_component %}
+                                                    <span class="badge bg-light text-dark border tiny-badge" title="Component"><i class="bi bi-link-45deg me-1"></i>Part</span>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="serial-col d-none d-xl-table-cell">{{ item.serial_no|default:"—" }}</td>
+                                        <td class="category-col d-none d-md-table-cell">
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border">
+                                                {{ item.category.name|default:"Uncategorized" }}
+                                            </span>
+                                        </td>
+                                        <td class="department-col d-none d-lg-table-cell">
+                                            {% if item.department %}
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border">
+                                                    {{ item.department }}
                                                 </span>
                                             {% else %}
-                                                <span class="badge bg-success">
-                                                    <i class="bi bi-calendar-check"></i> {{ item.end_of_life_date|date:"M d, Y" }}
-                                                </span>
+                                                <span class="text-muted">—</span>
                                             {% endif %}
-                                        {% else %}
-                                            <span class="text-muted">—</span>
-                                        {% endif %}
-                                     </td>
-                                    <td class="fw-medium">{% if item.acquisition_cost %}₱{{ item.acquisition_cost }}{% else %}—{% endif %}</td>
-                                    <td class="text-end pe-4">
-                                        <a href="{% url 'item_detail' item.id %}" class="btn btn-sm btn-outline-info" title="View Details">
-                                            <i class="bi bi-eye"></i> Details
-                                        </a>
-                                    </td>
-                                 </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
+                                        </td>
+                                        <td class="quantity-col d-none d-md-table-cell">
+                                            <span class="fw-semibold">
+                                                <i class="bi bi-hash me-1"></i> x{{ item.quantity }}
+                                            </span>
+                                        </td>
+                                        <td class="location-col d-none d-sm-table-cell">
+                                            <i class="bi bi-geo-alt text-muted me-1"></i>
+                                            <span class="badge bg-info bg-opacity-10 text-info border">
+                                                {{ item.location.name|default:"No Location" }}
+                                            </span>
+                                        </td>
+                                        <td class="status-col">
+                                            <span class="status-badge status-{{ item.status }}">
+                                                {{ item.get_status_display }}
+                                            </span>
+                                            {% if item.active_tickets %}
+                                                <i class="bi bi-lock-fill text-muted ms-1" title="Status managed by active Repair Ticket"></i>
+                                            {% endif %}
+                                        </td>
+                                        <td class="person-col d-none d-xl-table-cell">
+                                            {% if item.person_accountable %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border">
+                                                    <i class="bi bi-person me-1"></i>{{ item.person_accountable.name }}
+                                                </span>
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="acquisition-date-col d-none d-lg-table-cell">{{ item.acquisition_date|date:"M d, Y"|default:"—" }}</td>
+                                            <td class="eol-col d-none d-lg-table-cell">
+                                            {% if item.end_of_life_date %}
+                                                {% if item.is_expired %}
+                                                    <span class="badge bg-danger">Expired</span>
+                                                {% elif item.is_expiring_soon %}
+                                                    <span class="badge bg-warning text-dark">{{ item.get_days_until_eol }} days left</span>
+                                                {% else %}
+                                                    <span class="badge bg-success">{{ item.end_of_life_date|date:"M d, Y" }}</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">—</span>
+                                            {% endif %}
+                                        </td>
+                                            <td class="unit-cost-col d-none d-md-table-cell">{% if item.acquisition_cost %}₱{{ item.acquisition_cost|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+                                        <td class="text-end pe-4 details-col">
+                                            <a href="{% url 'item_detail' item.id %}" class="btn btn-sm btn-outline-info" title="View Details">
+                                                <i class="bi bi-eye"></i> Details
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -329,27 +575,29 @@
                 <thead class="table-light border-bottom">
                     <tr>
                         <th scope="col" class="ps-4">
-                            <input type="checkbox" id="selectAll" class="form-check-input">
+                            <!-- Individual Select All for table header -->
                         </th>
-                        <th scope="col">Item</th>
-                        <th scope="col">Category</th>
-                        <th scope="col">Quantity</th>
-                        <th scope="col">Location</th>
-                        <th scope="col">Status</th>
-                        <th scope="col">Person Accountable</th>
-                        <th scope="col">Acquisition Date</th>
-                        <th scope="col">End of Life</th>
-                        <th scope="col">Unit Cost</th>
-                        <th scope="col" class="text-end pe-4">Details</th>
+                        <th scope="col" class="item-col">Item</th>
+                        <th scope="col" class="serial-col d-none d-xl-table-cell">Serial No</th>
+                        <th scope="col" class="category-col d-none d-md-table-cell">Category</th>
+                        <th scope="col" class="department-col d-none d-lg-table-cell">Department</th>
+                        <th scope="col" class="quantity-col d-none d-md-table-cell">Quantity</th>
+                        <th scope="col" class="location-col d-none d-sm-table-cell">Location</th>
+                        <th scope="col" class="status-col">Status</th>
+                        <th scope="col" class="person-col d-none d-xl-table-cell">Person</th>
+                        <th scope="col" class="acquisition-date-col d-none d-lg-table-cell">Acquisition</th>
+                        <th scope="col" class="eol-col d-none d-lg-table-cell">EOL</th>
+                        <th scope="col" class="unit-cost-col d-none d-md-table-cell">Cost</th>
+                        <th scope="col" class="text-end pe-4 details-col">Details</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in items %}
                     <tr class="card-hover">
                         <td class="ps-4">
-                            <input type="checkbox" value="{{ item.id }}" class="form-check-input item-checkbox">
+                            <input type="checkbox" value="{{ item.id }}" class="form-check-input item-checkbox" {% if item.active_tickets %}data-has-ticket="true"{% endif %} data-is-kit="{{ item.is_kit|yesno:'true,false' }}">
                         </td>
-                        <td>
+                        <td class="item-col">
                             <div class="d-flex align-items-center gap-3">
                                 {% if item.image %}
                                     <img src="{{ item.image.url }}" alt="{{ item.name }}" class="thumbnail-img border">
@@ -358,33 +606,51 @@
                                         <i class="bi bi-image"></i>
                                     </div>
                                 {% endif %}
-                                <a href="{% url 'item_detail' item.id %}" class="text-decoration-none fw-bold text-dark d-block">
+                            <a href="{% url 'item_detail' item.id %}" class="text-decoration-none fw-bold text-dark d-block">
                                     {{ item.name }}
                                 </a>
+                                {% if item.is_kit %}
+                                    <span class="badge bg-dark text-white tiny-badge" title="Parent Kit"><i class="bi bi-box-seam me-1"></i>Kit</span>
+                                {% elif item.is_component %}
+                                    <span class="badge bg-light text-dark border tiny-badge" title="Component"><i class="bi bi-link-45deg me-1"></i>Part</span>
+                                {% endif %}
                             </div>
                         </td>
-                        <td>
+                        <td class="serial-col d-none d-xl-table-cell">{{ item.serial_no|default:"—" }}</td>
+                        <td class="category-col d-none d-md-table-cell">
                             <span class="badge bg-secondary bg-opacity-10 text-secondary border">
                                 {{ item.category.name|default:"Uncategorized" }}
                             </span>
                         </td>
-                        <td>
+                        <td class="department-col d-none d-lg-table-cell">
+                            {% if item.department %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border">
+                                    {{ item.department }}
+                                </span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="quantity-col d-none d-md-table-cell">
                             <span class="fw-semibold">
                                 <i class="bi bi-hash me-1"></i> x{{ item.quantity }}
                             </span>
                         </td>
-                        <td>
+                        <td class="location-col d-none d-sm-table-cell">
                             <i class="bi bi-geo-alt text-muted me-1"></i>
                             <span class="badge bg-info bg-opacity-10 text-info border">
                                 {{ item.location.name|default:"No Location" }}
                             </span>
                         </td>
-                        <td>
+                        <td class="status-col">
                             <span class="status-badge status-{{ item.status }}">
                                 {{ item.get_status_display }}
                             </span>
+                            {% if item.active_tickets %}
+                                <i class="bi bi-lock-fill text-muted ms-1" title="Status managed by active Repair Ticket"></i>
+                            {% endif %}
                         </td>
-                        <td>
+                        <td class="person-col d-none d-xl-table-cell">
                             {% if item.person_accountable %}
                                 <span class="badge bg-success bg-opacity-10 text-success border">
                                     <i class="bi bi-person me-1"></i>{{ item.person_accountable.name }}
@@ -393,28 +659,22 @@
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td class="text-muted">{{ item.acquisition_date|date:"M d, Y"|default:"—" }}</td>
-                        <td>
+                        <td class="acquisition-date-col d-none d-lg-table-cell">{{ item.acquisition_date|date:"M d, Y"|default:"—" }}</td>
+                        <td class="eol-col d-none d-lg-table-cell">
                             {% if item.end_of_life_date %}
                                 {% if item.is_expired %}
-                                    <span class="badge bg-danger">
-                                        <i class="bi bi-calendar-x"></i> Expired
-                                    </span>
+                                    <span class="badge bg-danger">Expired</span>
                                 {% elif item.is_expiring_soon %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="bi bi-calendar-exclamation"></i> {{ item.get_days_until_eol }} days left
-                                    </span>
+                                    <span class="badge bg-warning text-dark">{{ item.get_days_until_eol }} days left</span>
                                 {% else %}
-                                    <span class="badge bg-success">
-                                        <i class="bi bi-calendar-check"></i> {{ item.end_of_life_date|date:"M d, Y" }}
-                                    </span>
+                                    <span class="badge bg-success">{{ item.end_of_life_date|date:"M d, Y" }}</span>
                                 {% endif %}
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td class="fw-medium">{% if item.acquisition_cost %}₱{{ item.acquisition_cost }}{% else %}—{% endif %}</td>
-                        <td class="text-end pe-4">
+                            <td class="unit-cost-col d-none d-md-table-cell">{% if item.acquisition_cost %}₱{{ item.acquisition_cost|floatformat:2|intcomma }}{% else %}—{% endif %}</td>
+                        <td class="text-end pe-4 details-col">
                             <a href="{% url 'item_detail' item.id %}" class="btn btn-sm btn-outline-info" title="View Details">
                                 <i class="bi bi-eye"></i> Details
                             </a>
@@ -422,7 +682,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="11" class="text-center py-5">
+                        <td colspan="13" class="text-center py-5">
                             <div class="text-center py-5">
                                 <i class="bi bi-inbox text-muted mb-3 d-block" style="font-size: 3rem;"></i>
                                 <h5 class="fw-bold text-dark">No inventory items found</h5>
@@ -448,7 +708,7 @@
                 <ul class="pagination justify-content-center mb-0">
                     {% if items.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page=1&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&group_by={{ group_by }}">
+                            <a class="page-link" href="?page=1&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&primary_group={{ primary_group }}&secondary_group={{ secondary_group }}&kit_filter={{ kit_filter }}">
                                 <i class="bi bi-chevron-double-left"></i>
                             </a>
                         </li>
@@ -460,7 +720,7 @@
                     
                     {% if items.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ items.previous_page_number }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&group_by={{ group_by }}">
+                            <a class="page-link" href="?page={{ items.previous_page_number }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&primary_group={{ primary_group }}&secondary_group={{ secondary_group }}&kit_filter={{ kit_filter }}">
                                 <i class="bi bi-chevron-left"></i>
                             </a>
                         </li>
@@ -477,7 +737,7 @@
                             </li>
                         {% elif num > items.number|add:'-3' and num < items.number|add:'3' %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ num }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&group_by={{ group_by }}">
+                                <a class="page-link" href="?page={{ num }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&primary_group={{ primary_group }}&secondary_group={{ secondary_group }}&kit_filter={{ kit_filter }}">
                                     {{ num }}
                                 </a>
                             </li>
@@ -486,7 +746,7 @@
                     
                     {% if items.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ items.next_page_number }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&group_by={{ group_by }}">
+                            <a class="page-link" href="?page={{ items.next_page_number }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&primary_group={{ primary_group }}&secondary_group={{ secondary_group }}&kit_filter={{ kit_filter }}">
                                 <i class="bi bi-chevron-right"></i>
                             </a>
                         </li>
@@ -498,7 +758,7 @@
                     
                     {% if items.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ items.paginator.num_pages }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&group_by={{ group_by }}">
+                            <a class="page-link" href="?page={{ items.paginator.num_pages }}&search={{ search_query }}&sort={{ current_sort }}&invert={{ current_invert }}&status={{ status_filter }}&category={{ category_filter }}&location={{ location_filter }}&person={{ person_filter }}&primary_group={{ primary_group }}&secondary_group={{ secondary_group }}&kit_filter={{ kit_filter }}">
                                 <i class="bi bi-chevron-double-right"></i>
                             </a>
                         </li>
@@ -509,7 +769,6 @@
                     {% endif %}
                 </ul>
             </nav>
-            
             <div class="text-center text-muted small mt-3">
                 Showing {{ items.start_index }} - {{ items.end_index }} of {{ total_items }} items
             </div>
@@ -528,86 +787,73 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
             <form method="get" action="{% url 'item_list' %}">
                 <div class="modal-body p-4">
                     <p class="text-muted small mb-3">
                         <i class="bi bi-info-circle me-1"></i> Set your filters below. Search and sort options are on the main page.
                     </p>
-                    
                     <!-- Status Filter -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-tag me-1"></i> Status
-                        </label>
+                        <label class="form-label fw-bold"><i class="bi bi-tag me-1"></i> Status</label>
                         <select name="status" class="form-select form-select-lg">
                             <option value="">All Statuses</option>
                             {% for status_code, status_label in status_choices %}
-                                <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>
-                                    {{ status_label }}
-                                </option>
+                                <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>{{ status_label }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    
                     <!-- Category Filter -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-folder me-1"></i> Category
-                        </label>
+                        <label class="form-label fw-bold"><i class="bi bi-folder me-1"></i> Category</label>
                         <select name="category" class="form-select form-select-lg">
                             <option value="">All Categories</option>
                             {% for category in categories %}
-                                <option value="{{ category.id }}" {% if category_filter|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ category.name }}
-                                </option>
+                                <option value="{{ category.id }}" {% if category_filter|stringformat:"s" == category.id|stringformat:"s" %}selected{% endif %}>{{ category.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    
+                    <!-- Kit Type Filter -->
+                    <div class="mb-4">
+                        <label class="form-label fw-bold"><i class="bi bi-box-seam me-1"></i> Kit/Part Status</label>
+                        <select name="kit_filter" class="form-select form-select-lg">
+                            <option value="">Show All</option>
+                            <option value="kits" {% if kit_filter == 'kits' %}selected{% endif %}>Kits Only (Parent items)</option>
+                            <option value="parts" {% if kit_filter == 'parts' %}selected{% endif %}>Parts Only (Components)</option>
+                            <option value="standalone" {% if kit_filter == 'standalone' %}selected{% endif %}>Standalone Items Only</option>
+                        </select>
+                    </div>
                     <!-- Location Filter -->
                     <div class="mb-4">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-geo-alt me-1"></i> Location
-                        </label>
+                        <label class="form-label fw-bold"><i class="bi bi-geo-alt me-1"></i> Location</label>
                         <select name="location" class="form-select form-select-lg">
                             <option value="">All Locations</option>
                             {% for location in locations %}
-                                <option value="{{ location.id }}" {% if location_filter|stringformat:"s" == location.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ location.name }}
-                                </option>
+                                <option value="{{ location.id }}" {% if location_filter|stringformat:"s" == location.id|stringformat:"s" %}selected{% endif %}>{{ location.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    
                     <!-- Person Filter -->
                     <div class="mb-3">
-                        <label class="form-label fw-bold">
-                            <i class="bi bi-person me-1"></i> Person Accountable
-                        </label>
+                        <label class="form-label fw-bold"><i class="bi bi-person me-1"></i> Person Accountable</label>
                         <select name="person" class="form-select form-select-lg">
                             <option value="">All Persons</option>
                             {% for person in persons %}
-                                <option value="{{ person.id }}" {% if person_filter|stringformat:"s" == person.id|stringformat:"s" %}selected{% endif %}>
-                                    {{ person.name }}
-                                </option>
+                                <option value="{{ person.id }}" {% if person_filter|stringformat:"s" == person.id|stringformat:"s" %}selected{% endif %}>{{ person.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    
-                    <!-- Preserve search, sort, and invert values -->
                     <input type="hidden" name="search" value="{{ search_query }}">
                     <input type="hidden" name="sort" value="{{ current_sort }}">
-                    <input type="hidden" name="group_by" value="{{ group_by }}">
+                    <input type="hidden" name="primary_group" value="{{ primary_group }}">
+                    <input type="hidden" name="secondary_group" value="{{ secondary_group }}">
                     {% if current_invert %}
                         <input type="hidden" name="invert" value="true">
                     {% endif %}
                 </div>
-                
                 <div class="modal-footer bg-light rounded-bottom-4">
                     <div class="d-flex justify-content-between w-100">
                         <div>
-                            {% if status_filter or category_filter or location_filter or person_filter %}
+                            {% if status_filter or category_filter or location_filter or person_filter or kit_filter %}
                                 <button type="button" class="btn btn-outline-danger" id="clearFiltersBtn">
                                     <i class="bi bi-trash me-1"></i> Clear Filters
                                 </button>
@@ -634,40 +880,54 @@
         <div class="modal-content rounded-4 border-0 shadow-lg">
             <div class="modal-header bg-primary text-white rounded-top-4">
                 <h5 class="modal-title fw-bold">
-                    <i class="bi bi-pencil-square me-2"></i>Bulk Edit (<span id="bulkCount">0</span> items selected)
+                    <i class="bi bi-pencil-square me-2"></i>Bulk Edit (<span id="bulkCountModal">0</span> items selected)
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
             <form method="post" action="{% url 'bulk_edit' %}" id="bulkEditForm" enctype="multipart/form-data">
                 {% csrf_token %}
                 <div class="modal-body p-4" style="max-height: 70vh; overflow-y: auto;">
                     <input type="hidden" name="item_ids" id="selectedItemIds">
-                    
+                    <div id="bulkStatusWarning" class="alert alert-warning mb-4 d-none">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                        <strong>Note:</strong> Some selected items have active repair tickets. Status changes will be skipped for those items.
+                    </div>
                     <div class="alert alert-info mb-4">
                         <i class="bi bi-info-circle-fill me-2"></i>
                         Only fill in the fields you want to change. Empty fields will be ignored.
                     </div>
-                    
                     <div class="row g-3">
-                        <!-- Status -->
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-tag"></i> Status
-                            </label>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold"><i class="bi bi-tag"></i> Name</label>
+                                <input type="text" name="name" class="form-control" placeholder="Change name for selected items (leave blank to keep)">
+                            </div>
+                            <div class="col-md-6">
+                            <label class="form-label fw-bold"><i class="bi bi-tag"></i> Status</label>
                             <select name="status" class="form-select">
                                 <option value="">-- Keep unchanged --</option>
                                 {% for status_code, status_label in status_choices %}
                                     <option value="{{ status_code }}">{{ status_label }}</option>
                                 {% endfor %}
                             </select>
+                </div>
+                <div class="col-md-12" id="bulkStatusChildrenContainer" style="display:none;">
+                    <div class="form-check form-switch p-3 bg-light rounded border">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" id="bulkSyncStatus" name="sync_child_status" value="true">
+                        <label class="form-check-label fw-bold" for="bulkSyncStatus">Automatically update status for child items (parts)</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold"><i class="bi bi-box-seam"></i> Parent Kit</label>
+                    <select name="parent_item" class="form-select">
+                        <option value="">-- Keep Unchanged --</option>
+                        <option value="none">-- Set as Standalone (Remove from Kit) --</option>
+                        {% for p_item in all_items_list %}
+                            <option value="{{ p_item.id }}">{{ p_item.item_code }} - {{ p_item.name }}</option>
+                        {% endfor %}
+                    </select>
                         </div>
-                        
-                        <!-- Category -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-folder"></i> Category
-                            </label>
+                            <label class="form-label fw-bold"><i class="bi bi-folder"></i> Category</label>
                             <select name="category" class="form-select">
                                 <option value="">-- Keep unchanged --</option>
                                 {% for category in categories %}
@@ -675,12 +935,8 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
-                        <!-- Location -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-geo-alt"></i> Location
-                            </label>
+                            <label class="form-label fw-bold"><i class="bi bi-geo-alt"></i> Location</label>
                             <select name="location" class="form-select">
                                 <option value="">-- Keep unchanged --</option>
                                 {% for location in locations %}
@@ -688,12 +944,14 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
-                        <!-- Person Accountable -->
+                        <div class="col-md-12" id="bulkMoveChildrenContainer" style="display:none;">
+                            <div class="form-check form-switch p-3 bg-light rounded border">
+                                <input class="form-check-input ms-0 me-2" type="checkbox" id="bulkMoveChildren" name="move_children" value="true">
+                                <label class="form-check-label fw-bold" for="bulkMoveChildren">Automatically move child items to the new location</label>
+                            </div>
+                        </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-person"></i> Person Accountable
-                            </label>
+                            <label class="form-label fw-bold"><i class="bi bi-person"></i> Person Accountable</label>
                             <select name="person_accountable" class="form-select">
                                 <option value="">-- Keep unchanged --</option>
                                 {% for person in persons %}
@@ -701,36 +959,20 @@
                                 {% endfor %}
                             </select>
                         </div>
-                        
-                        <!-- Acquisition Date -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-calendar-check"></i> Acquisition Date
-                            </label>
+                            <label class="form-label fw-bold"><i class="bi bi-calendar-check"></i> Acquisition Date</label>
                             <input type="date" name="acquisition_date" class="form-control">
                         </div>
-                        
-                        <!-- End of Life Date -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-calendar-x"></i> End of Life Date
-                            </label>
+                            <label class="form-label fw-bold"><i class="bi bi-calendar-x"></i> End of Life Date</label>
                             <input type="date" name="end_of_life_date" class="form-control">
                         </div>
-                        
-                        <!-- Acquisition Cost -->
                         <div class="col-md-6">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-cash-stack"></i> Acquisition Cost (₱)
-                            </label>
+                            <label class="form-label fw-bold"><i class="bi bi-cash-stack"></i> Acquisition Cost (₱)</label>
                             <input type="number" name="acquisition_cost" class="form-control" step="0.01" placeholder="0.00">
                         </div>
-                        
-                        <!-- Image -->
                         <div class="col-md-12">
-                            <label class="form-label fw-bold">
-                                <i class="bi bi-image"></i> Image
-                            </label>
+                            <label class="form-label fw-bold"><i class="bi bi-image"></i> Image</label>
                             <input type="file" name="image" class="form-control" accept="image/*" id="bulkImageInput">
                             <div id="bulkImagePreview" class="mt-2 d-none">
                                 <img src="#" alt="Preview" style="max-width: 150px; max-height: 150px; border-radius: 8px;">
@@ -743,20 +985,16 @@
                             </div>
                         </div>
                     </div>
-                    
                     <hr class="my-4">
-                    
-                    <!-- Danger Zone -->
-                    <div class="alert alert-danger">
+                    <div class="border border-danger rounded-3 p-3 mb-3 bg-light">
                         <div class="form-check">
                             <input type="checkbox" name="delete" value="true" class="form-check-input" id="deleteCheck">
-                            <label class="form-check-label fw-bold" for="deleteCheck">
+                            <label class="form-check-label fw-bold text-danger" for="deleteCheck">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i> Delete all selected items (This cannot be undone!)
                             </label>
                         </div>
                     </div>
                 </div>
-                
                 <div class="modal-footer bg-light rounded-bottom-4">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="bi bi-x-circle me-1"></i> Cancel
@@ -770,101 +1008,89 @@
     </div>
 </div>
 
-<!-- Quick Add Modals -->
-<div class="modal fade" id="addCategoryModal" tabindex="-1" data-bs-backdrop="static">
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="columnModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow-lg">
             <div class="modal-header bg-primary text-white rounded-top-4">
                 <h5 class="modal-title fw-bold">
-                    <i class="bi bi-folder-plus me-2"></i>Add New Category
+                    <i class="bi bi-layout-three-columns me-2"></i>Show/Hide Columns
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <div id="categoryModalAlert"></div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Category Name <span class="text-danger">*</span></label>
-                    <input type="text" id="newCategoryName" class="form-control" placeholder="e.g., Laptop, Monitor, Printer">
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-info-circle me-1"></i> Select which columns to display.
+                </p>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colSerial" checked>
+                            <label class="form-check-label fw-semibold" for="colSerial">Serial No</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colCategory" checked>
+                            <label class="form-check-label fw-semibold" for="colCategory">Category</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colDepartment" checked>
+                            <label class="form-check-label fw-semibold" for="colDepartment">Department</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colQuantity" checked>
+                            <label class="form-check-label fw-semibold" for="colQuantity">Quantity</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colLocation" checked>
+                            <label class="form-check-label fw-semibold" for="colLocation">Location</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colStatus" checked>
+                            <label class="form-check-label fw-semibold" for="colStatus">Status</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colPerson" checked>
+                            <label class="form-check-label fw-semibold" for="colPerson">Person Accountable</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colAcquisitionDate" checked>
+                            <label class="form-check-label fw-semibold" for="colAcquisitionDate">Acquisition Date</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colEOL" checked>
+                            <label class="form-check-label fw-semibold" for="colEOL">End of Life</label>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input type="checkbox" class="form-check-input" id="colUnitCost" checked>
+                            <label class="form-check-label fw-semibold" for="colUnitCost">Unit Cost</label>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer bg-light rounded-bottom-4">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i> Cancel
+                <button type="button" class="btn btn-secondary" id="resetColumnsBtn">
+                    <i class="bi bi-arrow-repeat me-1"></i> Reset to Default
                 </button>
-                <button type="button" class="btn btn-primary" id="saveCategoryBtn">
-                    <i class="bi bi-check-circle me-1"></i> Add Category
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="addLocationModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white rounded-top-4">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-geo-alt-plus me-2"></i>Add New Location
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div id="locationModalAlert"></div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Location Name <span class="text-danger">*</span></label>
-                    <input type="text" id="newLocationName" class="form-control" placeholder="e.g., Main Office, Warehouse A">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Description (Optional)</label>
-                    <textarea id="newLocationDescription" class="form-control" rows="2" placeholder="Additional notes about this location..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer bg-light rounded-bottom-4">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-primary" id="saveLocationBtn">
-                    <i class="bi bi-check-circle me-1"></i> Add Location
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="addPersonModal" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white rounded-top-4">
-                <h5 class="modal-title fw-bold">
-                    <i class="bi bi-person-plus me-2"></i>Add New Person
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div id="personModalAlert"></div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Full Name <span class="text-danger">*</span></label>
-                    <input type="text" id="newPersonName" class="form-control" placeholder="e.g., Juan Dela Cruz">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Email (Optional)</label>
-                    <input type="email" id="newPersonEmail" class="form-control" placeholder="juan@example.com">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Department (Optional)</label>
-                    <input type="text" id="newPersonDepartment" class="form-control" placeholder="e.g., IT Department">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Contact Number (Optional)</label>
-                    <input type="text" id="newPersonContact" class="form-control" placeholder="e.g., 09123456789">
-                </div>
-            </div>
-            <div class="modal-footer bg-light rounded-bottom-4">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="bi bi-x-circle me-1"></i> Cancel
-                </button>
-                <button type="button" class="btn btn-primary" id="savePersonBtn">
-                    <i class="bi bi-check-circle me-1"></i> Add Person
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
+                    <i class="bi bi-check-circle me-1"></i> Apply
                 </button>
             </div>
         </div>
@@ -874,337 +1100,333 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     // ============================================
-    // 1. BULK EDIT FUNCTIONALITY
+    // DOM references
     // ============================================
-    const selectAllCheckbox = document.getElementById('selectAll');
+    const selectAllGlobal = document.getElementById('selectAllGlobal');
     const itemCheckboxes = document.querySelectorAll('.item-checkbox');
-    const bulkActionBtn = document.getElementById('bulkActionBtn');
-    const bulkEditModal = document.getElementById('bulkEditModal');
-    const selectedItemIdsInput = document.getElementById('selectedItemIds');
+    const bulkBtn = document.getElementById('bulkActionBtn');
+    const bulkModal = document.getElementById('bulkEditModal');
+    const selectedIdsInput = document.getElementById('selectedItemIds');
     const bulkCountSpan = document.getElementById('bulkCount');
+    const bulkCountModal = document.getElementById('bulkCountModal');
+    const selectedCountSpan = document.getElementById('selectedCountNumber');
     const bulkImageInput = document.getElementById('bulkImageInput');
-    const bulkImagePreview = document.getElementById('bulkImagePreview');
-    const bulkImagePreviewImg = bulkImagePreview?.querySelector('img');
-    
-    function updateBulkEditButton() {
-        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
-        const count = checkedBoxes.length;
-        if (bulkActionBtn) bulkActionBtn.disabled = count === 0;
-        
-        if (selectAllCheckbox) {
-            const totalCheckboxes = document.querySelectorAll('.item-checkbox').length;
-            if (count === totalCheckboxes && totalCheckboxes > 0) {
-                selectAllCheckbox.checked = true;
-                selectAllCheckbox.indeterminate = false;
-            } else if (count === 0) {
-                selectAllCheckbox.checked = false;
-                selectAllCheckbox.indeterminate = false;
+    const exportActionBtn = document.getElementById('exportActionBtn');
+    const bulkPreview = document.getElementById('bulkImagePreview');
+    const bulkPreviewImg = bulkPreview?.querySelector('img');
+    const deleteCheck = document.getElementById('deleteCheck');
+    const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+
+    // ============================================
+    // Helper: update selected count + buttons
+    // ============================================
+    function updateSelectedCount() {
+        const checked = document.querySelectorAll('.item-checkbox:checked');
+        const count = checked.length;
+
+        // Bulk edit button
+        if (bulkBtn) {
+            bulkBtn.disabled = count === 0;
+            bulkCountSpan.textContent = count;
+        }
+
+        // Smart Export Button logic
+        if (exportActionBtn) {
+            const baseUrl = "{% url 'export_items_csv' %}";
+            let newTitle = "";
+            
+            if (count > 0) {
+                const ids = Array.from(checked).map(cb => cb.value).join(',');
+                exportActionBtn.href = `${baseUrl}?item_ids=${ids}`;
+                exportActionBtn.innerHTML = `<i class="bi bi-file-earmark-check me-1"></i> Export Selected (${count})`;
+                newTitle = `Download ${count} selected item(s) as a CSV file`;
             } else {
-                selectAllCheckbox.indeterminate = true;
+                exportActionBtn.href = `${baseUrl}?{{ request.GET.urlencode }}`;
+                exportActionBtn.innerHTML = `<i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Results`;
+                newTitle = `Download all {{ total_items }} filtered results as a CSV file`;
+            }
+            
+            exportActionBtn.setAttribute('data-bs-original-title', newTitle);
+            const tooltip = bootstrap.Tooltip.getInstance(exportActionBtn);
+            if (tooltip) tooltip.update();
+        }
+
+        // Delete selected button
+        if (deleteSelectedBtn) deleteSelectedBtn.disabled = count === 0;
+        // Display count text
+        if (selectedCountSpan) selectedCountSpan.textContent = count;
+
+        // Global Select All checkbox state
+        if (selectAllGlobal) {
+            const total = document.querySelectorAll('.item-checkbox').length;
+            if (count === total && total > 0) {
+                selectAllGlobal.checked = true;
+                selectAllGlobal.indeterminate = false;
+            } else if (count === 0) {
+                selectAllGlobal.checked = false;
+                selectAllGlobal.indeterminate = false;
+            } else {
+                selectAllGlobal.indeterminate = true;
             }
         }
-    }
-    
-    if (selectAllCheckbox) {
-        selectAllCheckbox.addEventListener('change', function() {
-            const isChecked = this.checked;
-            itemCheckboxes.forEach(checkbox => {
-                checkbox.checked = isChecked;
-            });
-            updateBulkEditButton();
+
+        // Group checkboxes (nested groups)
+        document.querySelectorAll('.group-checkbox').forEach(gcb => {
+            const group = gcb.dataset.group;
+            const groupBoxes = document.querySelectorAll(`.item-checkbox[data-group="${CSS.escape(group)}"]`);
+            const checkedCount = document.querySelectorAll(`.item-checkbox[data-group="${CSS.escape(group)}"]:checked`).length;
+            if (checkedCount === 0) {
+                gcb.checked = false;
+                gcb.indeterminate = false;
+            } else if (checkedCount === groupBoxes.length) {
+                gcb.checked = true;
+                gcb.indeterminate = false;
+            } else {
+                gcb.indeterminate = true;
+            }
         });
     }
-    
-    itemCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateBulkEditButton);
-    });
-    
-    updateBulkEditButton();
-    
-    bulkActionBtn?.addEventListener('click', function() {
-        const selectedIds = [];
-        document.querySelectorAll('.item-checkbox:checked').forEach(checkbox => {
-            selectedIds.push(checkbox.value);
+
+    // ============================================
+    // Event listeners for checkboxes
+    // ============================================
+    document.querySelectorAll('.group-checkbox').forEach(gcb => {
+        gcb.addEventListener('change', function() {
+            const group = this.dataset.group;
+            document.querySelectorAll(`.item-checkbox[data-group="${CSS.escape(group)}"]`).forEach(cb => cb.checked = this.checked);
+            updateSelectedCount();
         });
-        selectedItemIdsInput.value = selectedIds.join(',');
-        bulkCountSpan.textContent = selectedIds.length;
-        
-        const form = document.getElementById('bulkEditForm');
-        if (form) {
-            form.reset();
-            if (bulkImagePreview) bulkImagePreview.classList.add('d-none');
-            if (bulkImagePreviewImg) bulkImagePreviewImg.src = '#';
-        }
-        
-        const modal = new bootstrap.Modal(bulkEditModal);
-        modal.show();
     });
-    
-    bulkImageInput?.addEventListener('change', function() {
-        const file = this.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                if (bulkImagePreviewImg) bulkImagePreviewImg.src = e.target.result;
-                if (bulkImagePreview) bulkImagePreview.classList.remove('d-none');
-            };
-            reader.readAsDataURL(file);
-        } else {
-            if (bulkImagePreview) bulkImagePreview.classList.add('d-none');
-            if (bulkImagePreviewImg) bulkImagePreviewImg.src = '#';
+
+    if (selectAllGlobal) {
+        selectAllGlobal.addEventListener('change', function() {
+            document.querySelectorAll('.item-checkbox').forEach(cb => cb.checked = this.checked);
+            updateSelectedCount();
+        });
+    }
+    itemCheckboxes.forEach(cb => cb.addEventListener('change', updateSelectedCount));
+    updateSelectedCount();
+
+    // ============================================
+    // Bulk Edit modal open
+    // ============================================
+    if (bulkBtn) {
+        bulkBtn.addEventListener('click', function() {
+            const ids = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
+            selectedIdsInput.value = ids.join(',');
+            bulkCountModal.textContent = ids.length;
+
+            // Check for items with active tickets and toggle warning
+            const hasTickets = Array.from(document.querySelectorAll('.item-checkbox:checked')).some(cb => cb.dataset.hasTicket === 'true');
+            const statusWarning = document.getElementById('bulkStatusWarning');
+            if (statusWarning) statusWarning.classList.toggle('d-none', !hasTickets);
+
+            // Reset form and image preview
+            const form = document.getElementById('bulkEditForm');
+            if (form) {
+                form.reset();
+                if (bulkPreview) bulkPreview.classList.add('d-none');
+                if (bulkPreviewImg) bulkPreviewImg.src = '#';
+            }
+            bootstrap.Modal.getOrCreateInstance(bulkModal).show();
+        });
+    }
+
+    // Image preview in bulk edit modal
+    if (bulkImageInput) {
+        bulkImageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file && bulkPreviewImg) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    bulkPreviewImg.src = e.target.result;
+                    if (bulkPreview) bulkPreview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                if (bulkPreview) bulkPreview.classList.add('d-none');
+                if (bulkPreviewImg) bulkPreviewImg.src = '#';
+            }
+        });
+    }
+
+    // Show/Hide Sync checkboxes in Bulk Edit
+    const bulkLocationSelect = document.querySelector('#bulkEditForm select[name="location"]');
+    const bulkStatusSelect = document.querySelector('#bulkEditForm select[name="status"]');
+    const moveChildrenContainer = document.getElementById('bulkMoveChildrenContainer');
+    const statusChildrenContainer = document.getElementById('bulkStatusChildrenContainer');
+
+    function toggleSyncContainers() {
+        const hasKits = Array.from(document.querySelectorAll('.item-checkbox:checked')).some(cb => cb.dataset.isKit === 'true');
+        if (moveChildrenContainer) {
+            moveChildrenContainer.style.display = (hasKits && bulkLocationSelect.value) ? 'block' : 'none';
         }
-    });
+        if (statusChildrenContainer) {
+            statusChildrenContainer.style.display = (hasKits && bulkStatusSelect.value) ? 'block' : 'none';
+        }
+    }
+
+    if (bulkLocationSelect) bulkLocationSelect.addEventListener('change', toggleSyncContainers);
+    if (bulkStatusSelect) bulkStatusSelect.addEventListener('change', toggleSyncContainers);
     
-    const deleteCheck = document.getElementById('deleteCheck');
-    deleteCheck?.addEventListener('change', function() {
-        if (this.checked) {
-            if (!confirm('WARNING: You are about to delete all selected items. This action cannot be undone. Are you absolutely sure?')) {
+    // Initialize visibility when modal opens
+    if (bulkBtn) bulkBtn.addEventListener('click', toggleSyncContainers);
+
+    // Delete checkbox confirmation inside bulk edit modal
+    if (deleteCheck) {
+        deleteCheck.addEventListener('change', function() {
+            if (this.checked && !confirm('WARNING: You are about to delete all selected items. This action cannot be undone. Are you absolutely sure?')) {
                 this.checked = false;
             }
+        });
+    }
+
+    // ============================================
+    // Delete Selected button (direct delete, no modal)
+    // ============================================
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.addEventListener('click', function() {
+            const checked = document.querySelectorAll('.item-checkbox:checked');
+            const count = checked.length;
+            if (count === 0) return;
+            if (confirm(`Are you sure you want to delete ${count} selected item(s)? This action cannot be undone.`)) {
+                // Build a POST form and submit
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'bulk_delete' %}";
+                // CSRF token
+                const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+                // Add selected item IDs
+                checked.forEach(cb => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'item_ids';
+                    input.value = cb.value;
+                    form.appendChild(input);
+                });
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    // ============================================
+    // Grouping toggle (primary/secondary)
+    // ============================================
+    const primaryGroup = document.getElementById('primaryGroupSelect');
+    const secondaryContainer = document.getElementById('secondaryGroupContainer');
+    if (primaryGroup && secondaryContainer) {
+        const toggleSecondary = () => {
+            secondaryContainer.style.display = primaryGroup.value === 'none' ? 'none' : 'block';
+            if (primaryGroup.value === 'none') {
+                const sec = document.getElementById('secondaryGroupSelect');
+                if (sec) sec.value = 'none';
+            }
+        };
+        primaryGroup.addEventListener('change', toggleSecondary);
+        toggleSecondary();
+    }
+
+    // ============================================
+    // Column visibility (localStorage)
+    // ============================================
+    const colMapping = {
+        'colSerial': 'serial-col',
+        'colCategory': 'category-col',
+        'colDepartment': 'department-col',
+        'colQuantity': 'quantity-col',
+        'colLocation': 'location-col',
+        'colStatus': 'status-col',
+        'colPerson': 'person-col',
+        'colAcquisitionDate': 'acquisition-date-col',
+        'colEOL': 'eol-col',
+        'colUnitCost': 'unit-cost-col'
+    };
+
+    function applyColumnPrefs() {
+        const saved = localStorage.getItem('inventory_columns');
+        let prefs = {};
+        if (saved) {
+            try {
+                prefs = JSON.parse(saved);
+            } catch (error) {
+                console.warn('Invalid inventory_columns storage value, resetting to defaults.', error);
+                localStorage.removeItem('inventory_columns');
+                prefs = {};
+            }
         }
-    });
-    
-    // ============================================
-    // 2. GROUPING FUNCTIONALITY
-    // ============================================
-    const groupBySelect = document.getElementById('groupBySelect');
-    
-    if (groupBySelect) {
-        groupBySelect.addEventListener('change', function() {
-            const form = document.getElementById('searchSortForm');
-            const existingInput = form.querySelector('input[name="group_by"]');
-            if (existingInput) existingInput.remove();
-            
-            const groupByInput = document.createElement('input');
-            groupByInput.type = 'hidden';
-            groupByInput.name = 'group_by';
-            groupByInput.value = this.value;
-            form.appendChild(groupByInput);
-            form.submit();
-        });
-    }
-    
-    function updateGroupCheckboxes() {
-        document.querySelectorAll('.group-checkbox').forEach(groupCheckbox => {
-            const groupName = groupCheckbox.dataset.group;
-            const groupCheckboxes = document.querySelectorAll(`.item-checkbox[data-group="${groupName}"]`);
-            const checkedCount = document.querySelectorAll(`.item-checkbox[data-group="${groupName}"]:checked`).length;
-            
-            if (checkedCount === 0) {
-                groupCheckbox.checked = false;
-                groupCheckbox.indeterminate = false;
-            } else if (checkedCount === groupCheckboxes.length) {
-                groupCheckbox.checked = true;
-                groupCheckbox.indeterminate = false;
-            } else {
-                groupCheckbox.checked = false;
-                groupCheckbox.indeterminate = true;
-            }
-        });
-    }
-    
-    document.querySelectorAll('.group-checkbox').forEach(groupCheckbox => {
-        groupCheckbox.addEventListener('change', function() {
-            const groupName = this.dataset.group;
-            const groupCheckboxes = document.querySelectorAll(`.item-checkbox[data-group="${groupName}"]`);
-            groupCheckboxes.forEach(checkbox => {
-                checkbox.checked = this.checked;
-            });
-            updateBulkEditButton();
-            updateGroupCheckboxes();
-        });
-    });
-    
-    // ============================================
-    // 3. QUICK ADD MODALS
-    // ============================================
-    function showModalAlert(modalId, message, type) {
-        const modal = document.querySelector(modalId);
-        if (!modal) return;
-        
-        const alertContainer = modal.querySelector('.modal-body');
-        if (!alertContainer) return;
-        
-        const existingAlert = alertContainer.querySelector('.alert');
-        if (existingAlert) existingAlert.remove();
-        
-        const newAlert = document.createElement('div');
-        newAlert.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-        newAlert.innerHTML = `${message}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
-        
-        alertContainer.insertBefore(newAlert, alertContainer.firstChild);
-        
-        setTimeout(() => {
-            if (newAlert) newAlert.remove();
-        }, 3000);
-    }
-    
-    const saveCategoryBtn = document.getElementById('saveCategoryBtn');
-    if (saveCategoryBtn) {
-        saveCategoryBtn.addEventListener('click', function() {
-            const name = document.getElementById('newCategoryName').value.trim();
-            if (!name) {
-                showModalAlert('#addCategoryModal', 'Please enter a category name.', 'error');
-                return;
-            }
-            
-            fetch("{% url 'quick_add_category' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({ name: name })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const categorySelects = document.querySelectorAll('select[name="category"]');
-                    categorySelects.forEach(select => {
-                        const newOption = new Option(data.name, data.id, true, true);
-                        select.appendChild(newOption);
-                    });
-                    showModalAlert('#addCategoryModal', data.message, 'success');
-                    setTimeout(() => {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
-                        if (modal) modal.hide();
-                        document.getElementById('newCategoryName').value = '';
-                    }, 1500);
+        for (const [id, cls] of Object.entries(colMapping)) {
+            const visible = prefs[id] ?? true;
+            document.querySelectorAll(`.${cls}`).forEach(el => {
+                if (!visible) {
+                    el.style.setProperty('display', 'none', 'important');
                 } else {
-                    showModalAlert('#addCategoryModal', data.error || 'An error occurred', 'error');
+                    el.style.removeProperty('display');
                 }
-            })
-            .catch(error => {
-                showModalAlert('#addCategoryModal', 'Network error. Please try again.', 'error');
             });
-        });
-    }
-    
-    const saveLocationBtn = document.getElementById('saveLocationBtn');
-    if (saveLocationBtn) {
-        saveLocationBtn.addEventListener('click', function() {
-            const name = document.getElementById('newLocationName').value.trim();
-            const description = document.getElementById('newLocationDescription').value.trim();
-            
-            if (!name) {
-                showModalAlert('#addLocationModal', 'Please enter a location name.', 'error');
-                return;
-            }
-            
-            fetch("{% url 'quick_add_location' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({ name: name, description: description })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const locationSelects = document.querySelectorAll('select[name="location"]');
-                    locationSelects.forEach(select => {
-                        const newOption = new Option(data.name, data.id, true, true);
-                        select.appendChild(newOption);
-                    });
-                    showModalAlert('#addLocationModal', data.message, 'success');
-                    setTimeout(() => {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('addLocationModal'));
-                        if (modal) modal.hide();
-                        document.getElementById('newLocationName').value = '';
-                        document.getElementById('newLocationDescription').value = '';
-                    }, 1500);
-                } else {
-                    showModalAlert('#addLocationModal', data.error || 'An error occurred', 'error');
-                }
-            })
-            .catch(error => {
-                showModalAlert('#addLocationModal', 'Network error. Please try again.', 'error');
-            });
-        });
-    }
-    
-    const savePersonBtn = document.getElementById('savePersonBtn');
-    if (savePersonBtn) {
-        savePersonBtn.addEventListener('click', function() {
-            const name = document.getElementById('newPersonName').value.trim();
-            const email = document.getElementById('newPersonEmail').value.trim();
-            const department = document.getElementById('newPersonDepartment').value.trim();
-            const contact_number = document.getElementById('newPersonContact').value.trim();
-            
-            if (!name) {
-                showModalAlert('#addPersonModal', 'Please enter the person\'s name.', 'error');
-                return;
-            }
-            
-            fetch("{% url 'quick_add_person' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                },
-                body: JSON.stringify({ name: name, email: email, department: department, contact_number: contact_number })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const personSelects = document.querySelectorAll('select[name="person_accountable"]');
-                    personSelects.forEach(select => {
-                        const newOption = new Option(data.name, data.id, true, true);
-                        select.appendChild(newOption);
-                    });
-                    showModalAlert('#addPersonModal', data.message, 'success');
-                    setTimeout(() => {
-                        const modal = bootstrap.Modal.getInstance(document.getElementById('addPersonModal'));
-                        if (modal) modal.hide();
-                        document.getElementById('newPersonName').value = '';
-                        document.getElementById('newPersonEmail').value = '';
-                        document.getElementById('newPersonDepartment').value = '';
-                        document.getElementById('newPersonContact').value = '';
-                    }, 1500);
-                } else {
-                    showModalAlert('#addPersonModal', data.error || 'An error occurred', 'error');
-                }
-            })
-            .catch(error => {
-                showModalAlert('#addPersonModal', 'Network error. Please try again.', 'error');
-            });
-        });
-    }
-    
-    const modals = ['addCategoryModal', 'addLocationModal', 'addPersonModal'];
-    modals.forEach(modalId => {
-        const modalElement = document.getElementById(modalId);
-        if (modalElement) {
-            modalElement.addEventListener('hidden.bs.modal', function() {
-                const inputs = modalElement.querySelectorAll('input, textarea');
-                inputs.forEach(input => input.value = '');
-                const alerts = modalElement.querySelectorAll('.alert');
-                alerts.forEach(alert => alert.remove());
-            });
+            const cb = document.getElementById(id);
+            if (cb) cb.checked = visible;
         }
-    });
-    
+    }
+
+    function saveColumnPrefs() {
+        const prefs = {};
+        for (const id of Object.keys(colMapping)) {
+            const cb = document.getElementById(id);
+            if (cb) prefs[id] = cb.checked;
+        }
+        localStorage.setItem('inventory_columns', JSON.stringify(prefs));
+        applyColumnPrefs();
+    }
+
+    const columnModal = document.getElementById('columnModal');
+    const toggleColumnsBtn = document.getElementById('toggleColumnsBtn');
+    const resetColumnsBtn = document.getElementById('resetColumnsBtn');
+
+    if (toggleColumnsBtn) {
+        toggleColumnsBtn.addEventListener('click', () => bootstrap.Modal.getOrCreateInstance(columnModal).show());
+    }
+    if (resetColumnsBtn) {
+        resetColumnsBtn.addEventListener('click', () => {
+            for (const id of Object.keys(colMapping)) {
+                const cb = document.getElementById(id);
+                if (cb) cb.checked = true;
+            }
+            saveColumnPrefs();
+        });
+    }
+    if (columnModal) {
+        columnModal.addEventListener('hidden.bs.modal', saveColumnPrefs);
+    }
+    applyColumnPrefs();
+
     // ============================================
-    // 4. CLEAR FILTERS
+    // Clear Filters button
     // ============================================
     const clearFiltersBtn = document.getElementById('clearFiltersBtn');
     if (clearFiltersBtn) {
         clearFiltersBtn.addEventListener('click', function() {
             const form = this.closest('form');
             if (form) {
-                const statusSelect = form.querySelector('select[name="status"]');
-                const categorySelect = form.querySelector('select[name="category"]');
-                const locationSelect = form.querySelector('select[name="location"]');
-                const personInput = form.querySelector('input[name="person"]');
-                if (statusSelect) statusSelect.value = '';
-                if (categorySelect) categorySelect.value = '';
-                if (locationSelect) locationSelect.value = '';
-                if (personInput) personInput.value = '';
+                ['status', 'category', 'location', 'person', 'kit_filter'].forEach(name => {
+                    const field = form.querySelector(`[name="${name}"]`);
+                    if (field) field.value = '';
+                });
                 form.submit();
             }
         });
     }
+
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
 });
 </script>
 {% endblock %}

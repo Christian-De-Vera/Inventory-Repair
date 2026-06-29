@@ -1,0 +1,129 @@
+{% extends 'repairs/repair_base.html' %}
+{% load humanize %}
+
+{% block title %}Ticket {{ ticket.ticket_number }}{% endblock %}
+
+{% block content %}
+<style>
+    :root { 
+        --bs-primary: #0d9488 !important; 
+        --bs-primary-rgb: 13, 148, 136 !important;
+    }
+    .btn-primary { background-color: #0d9488 !important; border-color: #0d9488 !important; }
+    .btn-primary:hover { background-color: #0f766e !important; border-color: #0f766e !important; }
+    .text-primary { color: #0d9488 !important; }
+    .border-primary { border-color: #0d9488 !important; }
+    
+    /* Breadcrumb and Link adjustments */
+    .breadcrumb-item a { color: #0d9488; }
+    .card-header h5.text-primary { color: #0d9488 !important; }
+    .list-group-item.border-primary { border-color: #0d9488 !important; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'repairs:ticket_list' %}">Repairs</a></li>
+                    <li class="breadcrumb-item active">{{ ticket.ticket_number }}</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold mb-0">Repair Ticket: {{ ticket.ticket_number }}</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'repairs:work_order_print' ticket.pk %}" target="_blank" class="btn btn-outline-secondary">
+                <i class="bi bi-printer me-1"></i> Print Work Order
+            </a>
+            {% if perms.repairs.change_repairticket %}
+                <a href="{% url 'repairs:ticket_update' ticket.pk %}" class="btn btn-primary">
+                    <i class="bi bi-pencil-square me-1"></i> Update Ticket
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Ticket Information -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-primary"><i class="bi bi-info-circle me-2"></i>Repair Details</h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <label class="small text-muted text-uppercase fw-bold d-block mb-1">Item</label>
+                            <a href="{% url 'item_detail' ticket.item.id %}" class="text-decoration-none fw-semibold fs-5">
+                                {{ ticket.item.name }}
+                            </a>
+                            <span class="d-block small text-muted">Code: {{ ticket.item.item_code }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted text-uppercase fw-bold d-block mb-1">Status</label>
+                            <span class="badge rounded-pill bg-{% if ticket.status == 'completed' %}success{% elif ticket.status == 'cancelled' or ticket.status == 'unrepairable' %}danger{% else %}warning text-dark{% endif %} px-3 py-2">
+                                {{ ticket.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="small text-muted text-uppercase fw-bold d-block mb-1">Priority</label>
+                            <span class="badge rounded-pill bg-{% if ticket.priority == 'urgent' or ticket.priority == 'high' %}danger{% else %}info{% endif %} px-3 py-2">
+                                {{ ticket.get_priority_display }}
+                            </span>
+                        </div>
+                        <div class="col-12">
+                            <label class="small text-muted text-uppercase fw-bold d-block mb-1">Issue Description</label>
+                            <p class="mb-0 p-3 bg-light rounded-3 border">{{ ticket.issue_description }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Granular Audit History -->
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-clock-history me-2"></i>Audit Trail & History</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for log in logs %}
+                        <div class="list-group-item p-4 border-start border-4 border-{% if 'Status changed' in log.note %}primary{% elif 'Assignment' in log.note %}info{% else %}secondary{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="badge bg-light text-dark border">{{ log.get_status_at_time_display }}</span>
+                                <small class="text-muted"><i class="bi bi-calendar3 me-1"></i> {{ log.created_at|date:"M d, Y H:i" }}</small>
+                            </div>
+                            <p class="mb-0 fs-6">{{ log.note }}</p>
+                        </div>
+                        {% empty %}
+                        <div class="p-5 text-center text-muted">
+                            <i class="bi bi-journal-x fs-1 d-block mb-2"></i>
+                            No history recorded yet.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Meta -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <div class="mb-4">
+                        <label class="small text-muted text-uppercase fw-bold d-block mb-1">Assigned To</label>
+                        <p class="fw-semibold mb-0">
+                            <i class="bi bi-person-badge me-2 text-primary"></i>
+                            {{ ticket.assigned_to.name|default:"Unassigned" }}
+                        </p>
+                    </div>
+                    <div class="mb-0">
+                        <label class="small text-muted text-uppercase fw-bold d-block mb-1">Repair Cost</label>
+                        <h3 class="fw-bold text-success">₱{{ ticket.actual_cost|floatformat:2|intcomma }}</h3>
+                        <small class="text-muted">Est. ₱{{ ticket.estimated_cost|floatformat:2|intcomma }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
