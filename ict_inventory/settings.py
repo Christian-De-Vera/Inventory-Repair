@@ -16,7 +16,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p10hpo7hd!cny_9m@8hnk&&zz%$j!!t#7f#-*e')
+SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p10hpo7hd!cny_9m@8hnk&&zz%$j!!t#7f#-*e'))
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['*']  # Accept any host header for multi-platform deployment
 
@@ -146,6 +146,11 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# CSRF settings for hosted platforms
+CSRF_TRUSTED_ORIGINS = ['https://*.railway.app', 'https://*.onrender.com', 'https://*.fly.dev']
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 # Media files (uploaded images)
 MEDIA_URL = '/media/'
