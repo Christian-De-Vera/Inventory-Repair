@@ -18,7 +18,15 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth.models import User
+from django.http import HttpResponse
 from inventory import views as inventory_views
+
+def create_admin(request):
+    if User.objects.filter(username='admin').exists():
+        return HttpResponse('Admin already exists')
+    User.objects.create_superuser('admin', 'admin@example.com', 'changeme123')
+    return HttpResponse('Created admin: admin / changeme123 - CHANGE PASSWORD IMMEDIATELY')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,6 +36,7 @@ urlpatterns = [
     path('inventory/hierarchy/<int:id>/', inventory_views.item_hierarchy, name='item_hierarchy'),
     path('repairs/', include('repairs.urls')),
     path('notifications/', include('notifications.urls')),
+    path('create-admin/', create_admin),
 ]
 
 if settings.DEBUG:
