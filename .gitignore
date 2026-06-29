@@ -50,3 +50,5 @@ Thumbs.db
 *.key
 .env
 docker-compose.override.yml
+.kilo/
+temp_patch.txt
