@@ -23,27 +23,34 @@ ALLOWED_HOSTS = ['inventory-repair.onrender.com', 'localhost', '127.0.0.1']
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
+    query_params = {}
+    if '?' in DATABASE_URL:
+        url_without_query, query_string = DATABASE_URL.split('?', 1)
+        for param in query_string.split('&'):
+            if '=' in param:
+                key, value = param.split('=', 1)
+                query_params[key] = value
+        DATABASE_URL = url_without_query
+
     if DATABASE_URL.count('[') == 1 and DATABASE_URL.count(']') == 1:
         DATABASE_URL = DATABASE_URL.replace('[', '').replace(']', '')
-
-    if '?' in DATABASE_URL:
-        DATABASE_URL = DATABASE_URL.split('?')[0]
 
     match = re.match(
         r'^(?:postgresql|postgres)://([^:]+):([^@]*)@([^:/]+):?(\d+)?/(.+)$',
         DATABASE_URL
     )
     if match:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': match.group(5),
-                'USER': match.group(1),
-                'PASSWORD': match.group(2),
-                'HOST': match.group(3),
-                'PORT': match.group(4) or '5432',
-            }
+        db_config = {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': match.group(5),
+            'USER': match.group(1),
+            'PASSWORD': match.group(2),
+            'HOST': match.group(3),
+            'PORT': match.group(4) or '5432',
         }
+        if query_params:
+            db_config['OPTIONS'] = query_params
+        DATABASES = {'default': db_config}
     else:
         raise Exception(f"Invalid DATABASE_URL format: {DATABASE_URL}")
 else:
