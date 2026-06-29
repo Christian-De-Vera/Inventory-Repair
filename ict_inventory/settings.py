@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
-import dj_database_url
+import re
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,9 +20,41 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p1
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['inventory-repair.onrender.com', 'localhost', '127.0.0.1']
 
-DATABASES = {
-    'default': dj_database_url.config(conn_max_age=600, default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'))
-}
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    if DATABASE_URL.count('[') == 1 and DATABASE_URL.count(']') == 1:
+        DATABASE_URL = DATABASE_URL.replace('[', '').replace(']', '')
+
+    match = re.match(
+        r'^(?:postgresql|postgres)://([^:]+):([^@]*)@([^:/]+):?(\d+)?/(.+)$',
+        DATABASE_URL
+    )
+    if match:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': match.group(5),
+                'USER': match.group(1),
+                'PASSWORD': match.group(2),
+                'HOST': match.group(3),
+                'PORT': match.group(4) or '5432',
+            }
+        }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
+        }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 INSTALLED_APPS = [
     'django.contrib.admin',
