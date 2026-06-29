@@ -20,13 +20,17 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth.models import User
 from django.http import HttpResponse
+import traceback
 from inventory import views as inventory_views
 
 def create_admin(request):
-    if User.objects.filter(username='admin').exists():
-        return HttpResponse('Admin already exists')
-    User.objects.create_superuser('admin', 'admin@example.com', 'changeme123')
-    return HttpResponse('Created admin: admin / changeme123 - CHANGE PASSWORD IMMEDIATELY')
+    try:
+        if User.objects.filter(username='admin').exists():
+            return HttpResponse('Admin already exists')
+        User.objects.create_superuser('admin', 'admin@example.com', 'changeme123')
+        return HttpResponse('Created admin: admin / changeme123 - CHANGE PASSWORD IMMEDIATELY')
+    except Exception as e:
+        return HttpResponse(f'Error: {e}\n\nTraceback:\n{traceback.format_exc()}', status=500)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
