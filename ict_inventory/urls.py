@@ -18,31 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.contrib.auth.models import User
-from django.http import HttpResponse
-import traceback
 from inventory import views as inventory_views
-
-def create_admin(request):
-    try:
-        user, created = User.objects.get_or_create(
-            username='admin',
-            defaults={'email': 'admin@example.com', 'is_staff': True, 'is_superuser': True}
-        )
-        if created:
-            user.set_password('changeme123')
-            user.save()
-            return HttpResponse('Created admin: admin / changeme123 - GO LOGIN NOW')
-        
-        if not user.is_staff:
-            user.is_staff = True
-        if not user.is_superuser:
-            user.is_superuser = True
-        user.set_password('changeme123')
-        user.save()
-        return HttpResponse('Updated admin: admin / changeme123 - GO LOGIN NOW')
-    except Exception as e:
-        return HttpResponse(f'Error: {e}\n\nTraceback:\n{traceback.format_exc()}', status=500)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -52,7 +28,6 @@ urlpatterns = [
     path('inventory/hierarchy/<int:id>/', inventory_views.item_hierarchy, name='item_hierarchy'),
     path('repairs/', include('repairs.urls')),
     path('notifications/', include('notifications.urls')),
-    path('create-admin/', create_admin),
 ]
 
 if settings.DEBUG:
