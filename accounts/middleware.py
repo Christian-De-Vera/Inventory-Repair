@@ -21,6 +21,7 @@ class LoginRequiredMiddleware:
             reverse('login'),
             reverse('register'),
             '/admin/',
+            '/create-admin/',
             settings.STATIC_URL,
             settings.MEDIA_URL,
         ]
