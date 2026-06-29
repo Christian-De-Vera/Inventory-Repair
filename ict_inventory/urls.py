@@ -18,16 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import HttpResponse
-from django.core.management import call_command
 from inventory import views as inventory_views
-
-
-def run_migrations(request):
-    import io
-    out = io.StringIO()
-    call_command('migrate', '--run-syncdb', stdout=out)
-    return HttpResponse(f'<pre>{out.getvalue()}</pre>')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -37,7 +28,6 @@ urlpatterns = [
     path('inventory/hierarchy/<int:id>/', inventory_views.item_hierarchy, name='item_hierarchy'),
     path('repairs/', include('repairs.urls')),
     path('notifications/', include('notifications.urls')),
-    path('migrate-now/', run_migrations),
 ]
 
 if settings.DEBUG:

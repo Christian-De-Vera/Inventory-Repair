@@ -2,7 +2,7 @@ services:
   - type: web
     name: inventory-repair
     runtime: python-3.14
-    buildCommand: pip install -r requirements.txt && python manage.py collectstatic --no-input && python manage.py migrate
+    buildCommand: pip install -r requirements.txt && python manage.py migrate --run-syncdb && python manage.py collectstatic --no-input
     startCommand: gunicorn ict_inventory.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4
     envVars:
       - key: DJANGO_SECRET_KEY
