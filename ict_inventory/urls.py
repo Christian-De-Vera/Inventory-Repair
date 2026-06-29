@@ -25,10 +25,22 @@ from inventory import views as inventory_views
 
 def create_admin(request):
     try:
-        if User.objects.filter(username='admin').exists():
-            return HttpResponse('Admin already exists')
-        User.objects.create_superuser('admin', 'admin@example.com', 'changeme123')
-        return HttpResponse('Created admin: admin / changeme123 - CHANGE PASSWORD IMMEDIATELY')
+        user, created = User.objects.get_or_create(
+            username='admin',
+            defaults={'email': 'admin@example.com', 'is_staff': True, 'is_superuser': True}
+        )
+        if created:
+            user.set_password('changeme123')
+            user.save()
+            return HttpResponse('Created admin: admin / changeme123 - GO LOGIN NOW')
+        
+        if not user.is_staff:
+            user.is_staff = True
+        if not user.is_superuser:
+            user.is_superuser = True
+        user.set_password('changeme123')
+        user.save()
+        return HttpResponse('Updated admin: admin / changeme123 - GO LOGIN NOW')
     except Exception as e:
         return HttpResponse(f'Error: {e}\n\nTraceback:\n{traceback.format_exc()}', status=500)
 
