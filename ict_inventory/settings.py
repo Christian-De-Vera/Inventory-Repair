@@ -17,60 +17,44 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p10hpo7hd!cny_9m@8hnk&&zz%$j!!t#7f#-*e')
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
-ALLOWED_HOSTS = ['inventory-repair.onrender.com', 'localhost', '127.0.0.1']
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = ['inventory-repair.onrender.com', 'inventory-repair.fly.dev', 'localhost', '127.0.0.1']
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 if DATABASE_URL:
+    query_params = {}
+    if '?' in DATABASE_URL:
+        url_without_query, query_string = DATABASE_URL.split('?', 1)
+        for param in query_string.split('&'):
+            if '=' in param:
+                key, value = param.split('=', 1)
+                query_params[key] = value
+        DATABASE_URL = url_without_query
+
     if DATABASE_URL.count('[') == 1 and DATABASE_URL.count(']') == 1:
         DATABASE_URL = DATABASE_URL.replace('[', '').replace(']', '')
 
-    if DATABASE_URL.startswith('sqlite'):
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': str(BASE_DIR / 'db.sqlite3') if DATABASE_URL.endswith('db.sqlite3') else DATABASE_URL.replace('sqlite:///', ''),
-            }
+    match = re.match(
+        r'^(?:postgresql|postgres)://([^:]+):([^@]*)@([^:/]+):?(\d+)?/(.+)$',
+        DATABASE_URL
+    )
+    if match:
+        db_config = {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': match.group(5),
+            'USER': match.group(1),
+            'PASSWORD': match.group(2),
+            'HOST': match.group(3),
+            'PORT': match.group(4) or '5432',
         }
+        if query_params:
+            db_config['OPTIONS'] = query_params
+        DATABASES = {'default': db_config}
     else:
-        if '?' in DATABASE_URL:
-            DATABASE_URL = DATABASE_URL.split('?')[0]
-
-        match = re.match(
-            r'^(?:postgresql|postgres)://([^:]+):([^@]*)@([^:/]+):?(\d+)?/(.+)$',
-            DATABASE_URL
-        )
-        if match:
-            query_params = {}
-            if '?' in DATABASE_URL:
-                url_without_query, query_string = DATABASE_URL.split('?', 1)
-                for param in query_string.split('&'):
-                    if '=' in param:
-                        key, value = param.split('=', 1)
-                        query_params[key] = value
-                DATABASE_URL = url_without_query
-
-            db_config = {
-                'ENGINE': 'django.db.backends.postgresql',
-                'NAME': match.group(5),
-                'USER': match.group(1),
-                'PASSWORD': match.group(2),
-                'HOST': match.group(3),
-                'PORT': match.group(4) or '5432',
-            }
-            if query_params:
-                db_config['OPTIONS'] = query_params
-            DATABASES = {'default': db_config}
-        else:
-            raise Exception(f"Invalid DATABASE_URL format: {DATABASE_URL}")
+        raise Exception(f"Invalid DATABASE_URL format: {DATABASE_URL}")
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+    raise Exception("DATABASE_URL environment variable is not set!")
 
 INSTALLED_APPS = [
     'django.contrib.admin',
