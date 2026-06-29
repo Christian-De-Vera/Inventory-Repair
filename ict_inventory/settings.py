@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p10hpo7hd!cny_9m@8hnk&&zz%$j!!t#7f#-*e')
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['inventory-repair.onrender.com', 'inventory-repair.fly.dev', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['*']  # Accept any host header for multi-platform deployment
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
