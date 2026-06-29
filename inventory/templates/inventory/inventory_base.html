@@ -539,7 +539,8 @@
                     try {
                         const cameras = await Html5Qrcode.getCameras();
                         if (cameras && cameras.length) {
-                            cameraId = cameras[0].id;
+                            const backCamera = cameras.find(cam => cam.label.toLowerCase().includes('back') || cam.label.toLowerCase().includes('environment'));
+                            cameraId = (backCamera || cameras[0]).id;
                         }
                     } catch (err) {
                         console.warn('Unable to enumerate cameras:', err);
