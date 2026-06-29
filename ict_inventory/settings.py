@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -19,8 +20,9 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p1
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 ALLOWED_HOSTS = ['inventory-repair.onrender.com', 'localhost', '127.0.0.1']
 
-
-# Application definition
+DATABASES = {
+    'default': dj_database_url.config(conn_max_age=600, default='sqlite:///' + str(BASE_DIR / 'db.sqlite3'))
+}
 
 INSTALLED_APPS = [
     'django.contrib.admin',
