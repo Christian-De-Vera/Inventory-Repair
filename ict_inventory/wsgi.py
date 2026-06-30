@@ -26,4 +26,9 @@ try:
 except Exception as e:
     print(f"Migration error: {e}", file=sys.stderr)
 
+# Configure WhiteNoise to serve static files in production
 application = get_wsgi_application()
+
+if os.environ.get('DJANGO_DEBUG', 'False') != 'True':
+    from whitenoise import WhiteNoise
+    application = WhiteNoise(application, root=os.path.join(os.path.dirname(__file__), '..', 'staticfiles'), prefix='/static/')
