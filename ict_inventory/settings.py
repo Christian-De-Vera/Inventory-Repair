@@ -148,6 +148,12 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# Static file finders
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+]
+
 # CSRF settings for hosted platforms
 CSRF_TRUSTED_ORIGINS = ['https://*.railway.app', 'https://*.onrender.com', 'https://*.fly.dev']
 CSRF_COOKIE_SECURE = not DEBUG
