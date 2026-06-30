@@ -74,14 +74,14 @@
                                         <i class="bi bi-plus-circle"></i> Enter a number greater than 1 to create multiple copies of this item.
                                     </div>
                                 {% elif field.name == 'image' %}
-                                    <div class="d-flex gap-3 align-items-start mb-3 p-3 border rounded-3 bg-light">
+                                    <div class="d-flex flex-column gap-3 align-items-start mb-3 p-3 border rounded-3 bg-light">
                                         {% if item and item.image %}
                                             <div class="text-center">
                                                 <span class="d-block small text-muted mb-1">Current</span>
                                                 <img src="{{ item.image.url }}" alt="{{ item.name }}" class="rounded shadow-sm" style="width: 80px; height: 80px; object-fit: cover;">
                                             </div>
                                         {% endif %}
-                                        <div class="flex-grow-1">
+                                        <div class="flex-grow-1 w-100">
                                             {{ field }}
                                             <div class="form-text text-muted mt-2">
                                                 <i class="bi bi-info-circle"></i> Upload a clear image of the item. Max size: 5MB.

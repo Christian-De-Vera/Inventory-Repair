@@ -40,3 +40,8 @@ def get_or_create_preferences(user):
     """Get or create notification preferences for user."""
     preferences, _ = NotificationPreference.objects.get_or_create(user=user)
     return preferences
+
+
+def delete_notifications(user, notification_ids):
+    """Delete notifications for user. Returns count of deleted notifications."""
+    return Notification.objects.filter(recipient=user, id__in=notification_ids).delete()[0]

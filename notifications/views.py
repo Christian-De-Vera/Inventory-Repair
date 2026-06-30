@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
-from .services import get_unread_count, mark_as_read, get_recent_notifications
+from .services import get_unread_count, mark_as_read, get_recent_notifications, delete_notifications
 
 
 @login_required
@@ -42,3 +42,14 @@ def api_mark_read(request):
 def api_unread_count(request):
     """Return unread notification count."""
     return JsonResponse({'count': get_unread_count(request.user)})
+
+
+@require_POST
+@login_required
+def api_delete_notifications(request):
+    """Delete notifications for current user."""
+    ids = request.POST.getlist('ids[]')
+    if not ids:
+        ids = request.POST.getlist('ids')
+    deleted_count = delete_notifications(request.user, ids)
+    return JsonResponse({'success': True, 'deleted_count': deleted_count})

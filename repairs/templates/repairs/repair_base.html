@@ -312,7 +312,10 @@
             <div class="dropdown-menu dropdown-menu-end p-2 notification-dropdown" id="notification-dropdown" style="min-width: 320px; max-height: 400px; overflow-y: auto; display: none;">
                 <div class="d-flex justify-content-between align-items-center mb-2 px-2">
                     <h6 class="mb-0 fw-bold">Notifications</h6>
-                    <button class="btn btn-sm btn-link text-decoration-none" id="mark-all-read">Mark all read</button>
+                    <div>
+                        <button class="btn btn-sm btn-link text-decoration-none" id="delete-selected" style="display: none;">Delete</button>
+                        <button class="btn btn-sm btn-link text-decoration-none" id="mark-all-read">Mark all read</button>
+                    </div>
                 </div>
                 <div id="notification-list"></div>
             </div>
@@ -427,7 +430,7 @@ function fetchNotifications() {
                         if (!r.ok) throw new Error('Network response was not ok');
                         return r.json();
                     })
-                    .then(data => {
+.then(data => {
                         if (data.notifications.length === 0) {
                             notificationList.innerHTML = '<div class="text-center text-muted py-3">No notifications</div>';
                             return;
@@ -436,6 +439,7 @@ function fetchNotifications() {
                             <div class="p-2 mb-1 rounded ${n.is_read ? '' : 'bg-light'}" style="border: 1px solid #e9ecef;" data-notification-id="${n.id}">
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div class="me-2">
+                                        <input type="checkbox" class="form-check-input notification-checkbox me-1" data-notification-id="${n.id}">
                                         <i class="bi ${getIconForType(n.type)} me-1"></i>
                                         <strong>${n.title}</strong>
                                     </div>
@@ -446,6 +450,7 @@ function fetchNotifications() {
                                 ${n.ticket_id ? `<a href="/repairs/${n.ticket_id}/" class="btn btn-sm btn-outline-primary mt-2">View Ticket</a>` : ''}
                             </div>
                             `).join('');
+                        attachCheckboxListeners();
                     })
                     .catch(err => {
                         console.error('Failed to fetch notifications:', err);
@@ -482,6 +487,20 @@ function fetchNotifications() {
                     .catch(err => console.error('Failed to update badge:', err));
             }
             
+            function updateDeleteButtonVisibility() {
+                const deleteBtn = document.getElementById('delete-selected');
+                const checkboxes = document.querySelectorAll('.notification-checkbox:checked');
+                if (deleteBtn) {
+                    deleteBtn.style.display = checkboxes.length > 0 ? 'inline-block' : 'none';
+                }
+            }
+            
+            function attachCheckboxListeners() {
+                document.querySelectorAll('.notification-checkbox').forEach(cb => {
+                    cb.addEventListener('change', updateDeleteButtonVisibility);
+                });
+            }
+            
             if (notificationBell) {
                 notificationBell.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -512,6 +531,26 @@ function fetchNotifications() {
                             fetchNotifications();
                             updateBadgeCount();
                         }).catch(err => console.error('Failed to mark read:', err));
+                    }
+                });
+            }
+            
+            const deleteSelectedBtn = document.getElementById('delete-selected');
+            if (deleteSelectedBtn) {
+                deleteSelectedBtn.addEventListener('click', function() {
+                    const selectedIds = Array.from(document.querySelectorAll('.notification-checkbox:checked'))
+                        .map(cb => cb.getAttribute('data-notification-id'));
+                    if (selectedIds.length > 0) {
+                        const formData = new FormData();
+                        selectedIds.forEach(id => formData.append('ids[]', id));
+                        fetch("/notifications/api/delete/", {
+                            method: 'POST',
+                            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''},
+                            body: formData
+                        }).then(() => {
+                            fetchNotifications();
+                            updateBadgeCount();
+                        }).catch(err => console.error('Failed to delete:', err));
                     }
                 });
             }

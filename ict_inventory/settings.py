@@ -149,8 +149,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # CSRF settings for hosted platforms
 CSRF_TRUSTED_ORIGINS = ['https://*.railway.app', 'https://*.onrender.com', 'https://*.fly.dev']
-CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
 
 # Media files (uploaded images)
 MEDIA_URL = '/media/'
