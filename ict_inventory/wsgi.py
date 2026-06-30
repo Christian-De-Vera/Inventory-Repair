@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/6.0/howto/deployment/wsgi/
 
 import os
 import sys
+from pathlib import Path
 
 from django.core.wsgi import get_wsgi_application
 from django.core.management import call_command
@@ -26,9 +27,15 @@ try:
 except Exception as e:
     print(f"Migration error: {e}", file=sys.stderr)
 
-# Configure WhiteNoise to serve static files in production
 application = get_wsgi_application()
 
+# Configure WhiteNoise to serve static files in production
 if os.environ.get('DJANGO_DEBUG', 'False') != 'True':
     from whitenoise import WhiteNoise
-    application = WhiteNoise(application, root=os.path.join(os.path.dirname(__file__), '..', 'staticfiles'), prefix='/static/')
+    static_root = Path(__file__).resolve().parent.parent / 'staticfiles'
+    if static_root.exists():
+        application = WhiteNoise(application, root=str(static_root), prefix='/static/')
+    else:
+        # Fallback: use Django's staticfiles finders to find static files
+        import warnings
+        warnings.warn(f"Staticfiles directory not found at {static_root}. Run collectstatic during deployment.")
