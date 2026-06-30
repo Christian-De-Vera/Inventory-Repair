@@ -147,13 +147,13 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# WhiteNoise configuration - supports Django 6.x
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
-
-# Default file storage for Django 6.x
+# WhiteNoise configuration for Django 6.x
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
 
