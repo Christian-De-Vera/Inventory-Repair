@@ -5,7 +5,7 @@
 {% block content %}
 <style>
     /* Style for select dropdowns */
-    select[name="location"], select[name="category"], select[name="person_accountable"] {
+    select[name="location"], select[name="category"], select[name="person_accountable"], select[name="department"] {
         background-color: #fff;
     }
     
@@ -131,6 +131,13 @@
                                     <div class="input-group">
                                         {{ field }}
                                         <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addPersonModal" title="Add New Person">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                {% elif field.name == 'department' %}
+                                    <div class="input-group">
+                                        {{ field }}
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addDepartmentModal" title="Add New Department">
                                             <i class="bi bi-plus-lg"></i>
                                         </button>
                                     </div>
@@ -348,8 +355,37 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle me-1"></i> Cancel
                 </button>
-                <button type="button" class="btn btn-primary" id="savePersonBtn">
+<button type="button" class="btn btn-primary" id="savePersonBtn">
                     <i class="bi bi-check-circle me-1"></i> Add Person
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Department -->
+<div class="modal fade" id="addDepartmentModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-building-add me-2"></i>Add New Department
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="departmentModalAlert"></div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Department Name <span class="text-danger">*</span></label>
+                    <input type="text" id="newDepartmentName" class="form-control" placeholder="e.g., IT Department, HR, Finance">
+                </div>
+            </div>
+            <div class="modal-footer bg-light rounded-bottom-4">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-1"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="saveDepartmentBtn">
+                    <i class="bi bi-check-circle me-1"></i> Add Department
                 </button>
             </div>
         </div>
@@ -626,160 +662,205 @@
                         
                         showModalAlert('#addLocationModal', data.message, 'success');
                         
-                        setTimeout(() => {
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('addLocationModal'));
-                            modal.hide();
-                            document.getElementById('newLocationName').value = '';
-                            document.getElementById('newLocationDescription').value = '';
-                            const alertDiv = document.querySelector('#addLocationModal .modal-body .alert');
-                            if (alertDiv) alertDiv.remove();
-                        }, 1500);
-                    } else {
-                        showModalAlert('#addLocationModal', data.error || 'An error occurred', 'error');
-                    }
-                })
-                .catch(error => {
-                    showModalAlert('#addLocationModal', 'Network error. Please try again.', 'error');
-                });
-            });
-        }
+setTimeout(() => {
+                             const modal = bootstrap.Modal.getInstance(document.getElementById('addLocationModal'));
+                             modal.hide();
+                             document.getElementById('newLocationName').value = '';
+                             document.getElementById('newLocationDescription').value = '';
+                             const alertDiv = document.querySelector('#addLocationModal .modal-body .alert');
+                             if (alertDiv) alertDiv.remove();
+                         }, 1500);
+                     } else {
+                         showModalAlert('#addLocationModal', data.error || 'An error occurred', 'error');
+                     }
+                 })
+                 .catch(error => {
+                     showModalAlert('#addLocationModal', 'Network error. Please try again.', 'error');
+                 });
+             });
+         }
 
-        // Add Person via AJAX
-        const savePersonBtn = document.getElementById('savePersonBtn');
-        if (savePersonBtn) {
-            savePersonBtn.addEventListener('click', function() {
-                const name = document.getElementById('newPersonName').value.trim();
-                const email = document.getElementById('newPersonEmail').value.trim();
-                const department = document.getElementById('newPersonDepartment').value.trim();
-                const contact_number = document.getElementById('newPersonContact').value.trim();
-                
-                if (!name) {
-                    showModalAlert('#addPersonModal', 'Please enter the person\'s name.', 'error');
-                    return;
-                }
-                
-                fetch("{% url 'quick_add_person' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify({ 
-                        name: name, 
-                        email: email, 
-                        department: department, 
-                        contact_number: contact_number 
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const personSelect = document.querySelector('select[name="person_accountable"]');
-                        const newOption = new Option(data.name, data.id, true, true);
-                        personSelect.appendChild(newOption);
-                        
-                        showModalAlert('#addPersonModal', data.message, 'success');
-                        
-                        setTimeout(() => {
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('addPersonModal'));
-                            modal.hide();
-                            document.getElementById('newPersonName').value = '';
-                            document.getElementById('newPersonEmail').value = '';
-                            document.getElementById('newPersonDepartment').value = '';
-                            document.getElementById('newPersonContact').value = '';
-                            const alertDiv = document.querySelector('#addPersonModal .modal-body .alert');
-                            if (alertDiv) alertDiv.remove();
-                        }, 1500);
-                    } else {
-                        showModalAlert('#addPersonModal', data.error || 'An error occurred', 'error');
-                    }
-                })
-                .catch(error => {
-                    showModalAlert('#addPersonModal', 'Network error. Please try again.', 'error');
-                });
-            });
-        }
+         // Add Person via AJAX
+         const savePersonBtn = document.getElementById('savePersonBtn');
+         if (savePersonBtn) {
+             savePersonBtn.addEventListener('click', function() {
+                 const name = document.getElementById('newPersonName').value.trim();
+                 const email = document.getElementById('newPersonEmail').value.trim();
+                 const department = document.getElementById('newPersonDepartment').value.trim();
+                 const contact_number = document.getElementById('newPersonContact').value.trim();
 
-        // Add Custom Field via AJAX (stays on same page)
-        const saveCustomFieldAjaxBtn = document.getElementById('saveCustomFieldAjaxBtn');
-        if (saveCustomFieldAjaxBtn) {
-            saveCustomFieldAjaxBtn.addEventListener('click', function() {
-                const name = document.getElementById('newCustomFieldName').value.trim();
-                const fieldType = document.getElementById('newCustomFieldType').value;
-                const helpText = document.getElementById('newCustomFieldHelp').value.trim();
-                
-                function showCustomFieldModalAlert(message, type) {
-                    const alertContainer = document.getElementById('customFieldModalAlert');
-                    if (!alertContainer) return;
-                    
-                    const existingAlert = alertContainer.querySelector('.alert');
-                    if (existingAlert) existingAlert.remove();
-                    
-                    const newAlert = document.createElement('div');
-                    newAlert.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
-                    newAlert.innerHTML = `
-                        ${message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    `;
-                    
-                    alertContainer.appendChild(newAlert);
-                    
-                    setTimeout(() => {
-                        if (newAlert) newAlert.remove();
-                    }, 3000);
-                }
-                
-                if (!name) {
-                    showCustomFieldModalAlert('Please enter a field name.', 'error');
-                    return;
-                }
-                
-                fetch("{% url 'quick_add_custom_field' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    },
-                    body: JSON.stringify({ 
-                        name: name, 
-                        field_type: fieldType,
-                        help_text: helpText
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        showCustomFieldModalAlert(data.message, 'success');
-                        
-                        // Reload the page to show the new field in the form
-                        setTimeout(() => {
-                            location.reload();
-                        }, 1500);
-                    } else {
-                        showCustomFieldModalAlert(data.error || 'An error occurred', 'error');
-                    }
-                })
-                .catch(error => {
-                    showCustomFieldModalAlert('Network error. Please try again.', 'error');
-                });
-            });
-        }
+                 if (!name) {
+                     showModalAlert('#addPersonModal', 'Please enter the person\'s name.', 'error');
+                     return;
+                 }
 
-        // Reset modals when closed
-        const modals = ['addCategoryModal', 'addLocationModal', 'addPersonModal', 'addCustomFieldModal'];
-        modals.forEach(modalId => {
-            const modalElement = document.getElementById(modalId);
-            if (modalElement) {
-                modalElement.addEventListener('hidden.bs.modal', function() {
-                    const inputs = modalElement.querySelectorAll('input, textarea');
-                    inputs.forEach(input => input.value = '');
-                    const selects = modalElement.querySelectorAll('select');
-                    selects.forEach(select => select.value = 'text');
-                    const alerts = modalElement.querySelectorAll('.alert');
-                    alerts.forEach(alert => alert.remove());
-                });
-            }
-        });
-    });
-</script>
+                 fetch("{% url 'quick_add_person' %}", {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                     },
+                     body: JSON.stringify({
+                         name: name,
+                         email: email,
+                         department: department,
+                         contact_number: contact_number
+                     })
+                 })
+                 .then(response => response.json())
+                 .then(data => {
+                     if (data.success) {
+                         const personSelect = document.querySelector('select[name="person_accountable"]');
+                         const newOption = new Option(data.name, data.id, true, true);
+                         personSelect.appendChild(newOption);
+
+                         showModalAlert('#addPersonModal', data.message, 'success');
+
+                         setTimeout(() => {
+                             const modal = bootstrap.Modal.getInstance(document.getElementById('addPersonModal'));
+                             modal.hide();
+                             document.getElementById('newPersonName').value = '';
+                             document.getElementById('newPersonEmail').value = '';
+                             document.getElementById('newPersonDepartment').value = '';
+                             document.getElementById('newPersonContact').value = '';
+                             const alertDiv = document.querySelector('#addPersonModal .modal-body .alert');
+                             if (alertDiv) alertDiv.remove();
+                         }, 1500);
+                     } else {
+                         showModalAlert('#addPersonModal', data.error || 'An error occurred', 'error');
+                     }
+                 })
+                 .catch(error => {
+                     showModalAlert('#addPersonModal', 'Network error. Please try again.', 'error');
+                 });
+             });
+         }
+
+         // Add Department via AJAX
+         const saveDepartmentBtn = document.getElementById('saveDepartmentBtn');
+         if (saveDepartmentBtn) {
+             saveDepartmentBtn.addEventListener('click', function() {
+                 const name = document.getElementById('newDepartmentName').value.trim();
+
+                 if (!name) {
+                     showModalAlert('#addDepartmentModal', 'Please enter a department name.', 'error');
+                     return;
+                 }
+
+                 fetch("{% url 'quick_add_department' %}", {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                     },
+                     body: JSON.stringify({ name: name })
+                 })
+                 .then(response => response.json())
+                 .then(data => {
+                     if (data.success) {
+                         const departmentSelect = document.querySelector('select[name="department"]');
+                         const newOption = new Option(data.name, data.id, true, true);
+                         departmentSelect.appendChild(newOption);
+
+                         showModalAlert('#addDepartmentModal', data.message, 'success');
+
+                         setTimeout(() => {
+                             const modal = bootstrap.Modal.getInstance(document.getElementById('addDepartmentModal'));
+                             modal.hide();
+                             document.getElementById('newDepartmentName').value = '';
+                             const alertDiv = document.querySelector('#addDepartmentModal .modal-body .alert');
+                             if (alertDiv) alertDiv.remove();
+                         }, 1500);
+                     } else {
+                         showModalAlert('#addDepartmentModal', data.error || 'An error occurred', 'error');
+                     }
+                 })
+                 .catch(error => {
+                     showModalAlert('#addDepartmentModal', 'Network error. Please try again.', 'error');
+                 });
+             });
+         }
+
+// Add Custom Field via AJAX (stays on same page)
+         const saveCustomFieldAjaxBtn = document.getElementById('saveCustomFieldAjaxBtn');
+         if (saveCustomFieldAjaxBtn) {
+             saveCustomFieldAjaxBtn.addEventListener('click', function() {
+                 const name = document.getElementById('newCustomFieldName').value.trim();
+                 const fieldType = document.getElementById('newCustomFieldType').value;
+                 const helpText = document.getElementById('newCustomFieldHelp').value.trim();
+
+                 function showCustomFieldModalAlert(message, type) {
+                     const alertContainer = document.getElementById('customFieldModalAlert');
+                     if (!alertContainer) return;
+
+                     const existingAlert = alertContainer.querySelector('.alert');
+                     if (existingAlert) existingAlert.remove();
+
+                     const newAlert = document.createElement('div');
+                     newAlert.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show`;
+                     newAlert.innerHTML = `
+                         ${message}
+                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                     `;
+
+                     alertContainer.appendChild(newAlert);
+
+                     setTimeout(() => {
+                         if (newAlert) newAlert.remove();
+                     }, 3000);
+                 }
+
+                 if (!name) {
+                     showCustomFieldModalAlert('Please enter a field name.', 'error');
+                     return;
+                 }
+
+                 fetch("{% url 'quick_add_custom_field' %}", {
+                     method: 'POST',
+                     headers: {
+                         'Content-Type': 'application/json',
+                         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                     },
+                     body: JSON.stringify({
+                         name: name,
+                         field_type: fieldType,
+                         help_text: helpText
+                     })
+                 })
+                 .then(response => response.json())
+                 .then(data => {
+                     if (data.success) {
+                         showCustomFieldModalAlert(data.message, 'success');
+
+                         // Reload the page to show the new field in the form
+                         setTimeout(() => {
+                             location.reload();
+                         }, 1500);
+                     } else {
+                         showCustomFieldModalAlert(data.error || 'An error occurred', 'error');
+                     }
+                 })
+                 .catch(error => {
+                     showCustomFieldModalAlert('Network error. Please try again.', 'error');
+                 });
+             });
+         }
+
+         // Reset modals when closed
+         const modals = ['addCategoryModal', 'addLocationModal', 'addPersonModal', 'addDepartmentModal', 'addCustomFieldModal'];
+         modals.forEach(modalId => {
+             const modalElement = document.getElementById(modalId);
+             if (modalElement) {
+                 modalElement.addEventListener('hidden.bs.modal', function() {
+                     const inputs = modalElement.querySelectorAll('input, textarea');
+                     inputs.forEach(input => input.value = '');
+                     const selects = modalElement.querySelectorAll('select');
+                     selects.forEach(select => select.value = 'text');
+                     const alerts = modalElement.querySelectorAll('.alert');
+                     alerts.forEach(alert => alert.remove());
+                 });
+             }
+         });
+     });
+ </script>
 {% endblock %}
