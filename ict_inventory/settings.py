@@ -162,10 +162,6 @@ CSRF_TRUSTED_ORIGINS = ['https://*.railway.app', 'https://*.onrender.com', 'http
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
-# Security settings for Railway (HTTPS)
-USE_X_FORWARDED_HOST = True
-USE_X_FORWARDED_PORT = True
-
 # Media files (uploaded images)
 # Railway provides persistent storage at /storage
 RAILWAY_STORAGE = os.environ.get('RAILWAY_STORAGE_PATH', '/storage')
