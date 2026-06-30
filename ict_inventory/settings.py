@@ -163,12 +163,8 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
 # Security settings for Railway (HTTPS)
-if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    USE_X_FORWARDED_HOST = True
-    USE_X_FORWARDED_PORT = True
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
 
 # Media files (uploaded images)
 # Railway provides persistent storage at /storage
