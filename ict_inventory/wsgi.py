@@ -19,6 +19,10 @@ try:
     import django
     django.setup()
     call_command('migrate', '--run-syncdb', verbosity=1)
+    # Ensure media directory exists
+    from django.conf import settings
+    if not os.path.exists(settings.MEDIA_ROOT):
+        os.makedirs(settings.MEDIA_ROOT, exist_ok=True)
 except Exception as e:
     print(f"Migration error: {e}", file=sys.stderr)
 

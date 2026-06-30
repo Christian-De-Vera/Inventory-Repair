@@ -153,8 +153,13 @@ CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
 # Media files (uploaded images)
+# Railway provides persistent storage at /storage
+RAILWAY_STORAGE = os.environ.get('RAILWAY_STORAGE_PATH', '/storage')
+if os.path.exists(RAILWAY_STORAGE):
+    MEDIA_ROOT = os.path.join(RAILWAY_STORAGE, 'media')
+else:
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
