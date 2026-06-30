@@ -4,6 +4,9 @@ services:
     runtime: python-3.14
     buildCommand: pip install -r requirements.txt && python manage.py migrate --run-syncdb && python manage.py collectstatic --no-input
     startCommand: gunicorn ict_inventory.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4
+    disk:
+      name: media-storage
+      mountPath: /storage
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
@@ -11,6 +14,8 @@ services:
         value: "False"
       - key: DJANGO_ALLOWED_HOSTS
         value: "inventory-repair.onrender.com"
+      - key: RAILWAY_STORAGE_PATH
+        value: "/storage"
       - key: PYTHONUNBUFFERED
         value: "true"
     autoDeploy: true
