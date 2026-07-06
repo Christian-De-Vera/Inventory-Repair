@@ -127,6 +127,7 @@ class Item(models.Model):
     # Status choices
     STATUS_CHOICES = [
         ('available', 'Active'),
+        ('maintenance', 'Maintenance'),
         ('in_repair', 'In Repair'),
         ('decommissioned', 'Decommissioned'),
         ('lost', 'Lost'),
