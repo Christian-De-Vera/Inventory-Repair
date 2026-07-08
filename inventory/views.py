@@ -44,8 +44,8 @@ def dashboard(request):
     _conn.queries_log.clear()
     # Total items (count of records)
     total_items = Item.objects.count()
-    active_items = Item.objects.filter(status='available')
-    in_repair_items = Item.objects.filter(status='in_repair')
+    active_items = Item.objects.filter(status='available').select_related('category', 'location', 'person_accountable')
+    in_repair_items = Item.objects.filter(status='in_repair').select_related('category', 'location', 'person_accountable')
     total_asset_value = Item.objects.aggregate(
         total=Coalesce(
             Sum(ExpressionWrapper(F('acquisition_cost') * F('quantity'), output_field=DecimalField())),
