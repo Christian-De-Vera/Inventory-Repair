@@ -234,11 +234,45 @@
         .sidebar-backdrop.show {
             display: block;
         }
+
+        /* Global page loading overlay */
+        #page-loader {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(248, 249, 250, 0.85);
+            backdrop-filter: blur(2px);
+        }
+        #page-loader.show {
+            display: flex;
+        }
+        .page-loader-spinner {
+            width: 3.5rem;
+            height: 3.5rem;
+            border: 0.35rem solid #e9ecef;
+            border-top-color: #0d6efd;
+            border-radius: 50%;
+            animation: page-loader-spin 0.8s linear infinite;
+        }
+        @keyframes page-loader-spin {
+            to { transform: rotate(360deg); }
+        }
     </style>
     
     {% block extra_css %}{% endblock %}
 </head>
 <body class="min-vh-100">
+    
+    <!-- Global page loading overlay -->
+    <div id="page-loader" role="status" aria-live="polite">
+        <div class="text-center">
+            <div class="page-loader-spinner"></div>
+            <div class="mt-3 fw-semibold text-primary">Loading…</div>
+        </div>
+    </div>
     
     <!-- Sidebar Navigation -->
     <nav class="sidebar shadow flex-shrink-0 p-3 d-flex flex-column" id="sidebar">
@@ -709,6 +743,41 @@ const unreadIds = Array.from(document.querySelectorAll('[data-notification-id]')
             // Initial badge update on page load
             updateBadgeCount();
         </script>
+    
+    <script>
+        // Global page loading overlay
+        (function () {
+            const pageLoader = document.getElementById('page-loader');
+            if (!pageLoader) return;
+
+            const showLoader = () => pageLoader.classList.add('show');
+            const hideLoader = () => pageLoader.classList.remove('show');
+
+            window.addEventListener('load', hideLoader);
+            window.addEventListener('pageshow', hideLoader);
+
+            // Show on internal link clicks (full page navigation)
+            document.addEventListener('click', function (e) {
+                const link = e.target.closest('a');
+                if (!link) return;
+                const href = link.getAttribute('href');
+                if (!href) return;
+                if (link.target === '_blank') return;
+                if (href.startsWith('#') || href.startsWith('javascript:') ||
+                    href.startsWith('mailto:') || href.startsWith('tel:')) return;
+                if (link.hasAttribute('data-no-loader')) return;
+                if (link.origin && link.origin !== window.location.origin) return;
+                showLoader();
+            });
+
+            // Show on full-page form submissions
+            document.addEventListener('submit', function (e) {
+                const form = e.target;
+                if (form.hasAttribute('data-no-loader')) return;
+                showLoader();
+            });
+        })();
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>
