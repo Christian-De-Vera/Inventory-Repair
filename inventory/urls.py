@@ -32,8 +32,5 @@ urlpatterns = [
     path('export/csv/', views.export_items_csv, name='export_items_csv'),
     path('mark-in-repair/<int:id>/', views.mark_item_in_repair, name='mark_in_repair'),
 
-    path('sw.js', views.service_worker, name='service_worker'),
-    path('manifest.webmanifest', views.manifest, name='manifest'),
-
     path('dashboard/', views.dashboard, name='inventory_dashboard'),
 ]
