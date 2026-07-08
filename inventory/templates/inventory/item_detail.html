@@ -550,7 +550,7 @@ function confirmAndMarkInRepair(itemId) {
     if (confirm('Mark this item as "In Repair" and create a repair ticket?')) {
         const form = document.createElement('form');
         form.method = 'POST';
-        form.action = '{% url "mark_item_in_repair" 0 %}'.replace('/0/', '/' + itemId + '/');
+        form.action = '{% url "mark_in_repair" 0 %}'.replace('/0/', '/' + itemId + '/');
         
         const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
         if (csrfToken) {
