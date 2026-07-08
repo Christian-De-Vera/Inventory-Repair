@@ -138,7 +138,7 @@
                             <div class="col-sm-6">
                                 <div class="p-3 border rounded-3 bg-light h-100">
                                     <div class="text-muted small text-uppercase fw-bold mb-1"><i class="bi bi-tag"></i> Category</div>
-                                    <div class="fw-semibold">{{ item.category.name|default:"Uncategorized" }}</div>
+                                    <div class="fw-semibold">{% if item.category %}{{ item.category.name }}{% else %}Uncategorized{% endif %}</div>
                                 </div>
                             </div>
                             <div class="col-sm-6">
@@ -385,7 +385,7 @@
                             <tr>
                                 <td class="ps-4"><code>{{ child.item_code }}</code></td>
                                 <td class="fw-bold">{{ child.name }}</td>
-                                <td>{{ child.location.name|default:"---" }}</td>
+                                <td>{% if child.location %}{{ child.location.name }}{% else %}---{% endif %}</td>
                                 <td><span class="status-badge status-{{ child.status }}">{{ child.get_status_display }}</span></td>
                                 <td class="text-end pe-4">
                                     <div class="btn-group">
@@ -481,7 +481,7 @@
                                 <td class="ps-4">{{ log.moved_at|date:"M d, Y h:i A" }}</td>
                                 <td>
                                     <span class="badge bg-info bg-opacity-10 text-info border">
-                                        {{ log.location.name|default:"No Location" }}
+                                        {% if log.location %}{{ log.location.name }}{% else %}No Location{% endif %}
                                     </span>
                                 </td>
                             </tr>

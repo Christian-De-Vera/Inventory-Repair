@@ -375,7 +375,7 @@
                                                         <td class="serial-col d-none d-xl-table-cell">{{ item.serial_no|default:"—" }}</td>
                                                         <td class="category-col d-none d-md-table-cell">
                                                             <span class="badge bg-secondary bg-opacity-10 text-secondary border">
-                                                                {{ item.category.name|default:"Uncategorized" }}
+                                                                {% if item.category %}{{ item.category.name }}{% else %}Uncategorized{% endif %}
                                                             </span>
                                                         </td>
                                                         <td class="department-col d-none d-lg-table-cell">
@@ -395,7 +395,7 @@
                                                         <td class="location-col d-none d-sm-table-cell">
                                                             <i class="bi bi-geo-alt text-muted me-1"></i>
                                                             <span class="badge bg-info bg-opacity-10 text-info border">
-                                                                {{ item.location.name|default:"No Location" }}
+                                                                {% if item.location %}{{ item.location.name }}{% else %}No Location{% endif %}
                                                             </span>
                                                         </td>
                                                         <td class="status-col">
@@ -496,7 +496,7 @@
                                         <td class="serial-col d-none d-xl-table-cell">{{ item.serial_no|default:"—" }}</td>
                                         <td class="category-col d-none d-md-table-cell">
                                             <span class="badge bg-secondary bg-opacity-10 text-secondary border">
-                                                {{ item.category.name|default:"Uncategorized" }}
+                                                {% if item.category %}{{ item.category.name }}{% else %}Uncategorized{% endif %}
                                             </span>
                                         </td>
                                         <td class="department-col d-none d-lg-table-cell">
@@ -516,7 +516,7 @@
                                         <td class="location-col d-none d-sm-table-cell">
                                             <i class="bi bi-geo-alt text-muted me-1"></i>
                                             <span class="badge bg-info bg-opacity-10 text-info border">
-                                                {{ item.location.name|default:"No Location" }}
+                                                {% if item.location %}{{ item.location.name }}{% else %}No Location{% endif %}
                                             </span>
                                         </td>
                                         <td class="status-col">
@@ -619,7 +619,7 @@
                         <td class="serial-col d-none d-xl-table-cell">{{ item.serial_no|default:"—" }}</td>
                         <td class="category-col d-none d-md-table-cell">
                             <span class="badge bg-secondary bg-opacity-10 text-secondary border">
-                                {{ item.category.name|default:"Uncategorized" }}
+                                {% if item.category %}{{ item.category.name }}{% else %}Uncategorized{% endif %}
                             </span>
                         </td>
                         <td class="department-col d-none d-lg-table-cell">
@@ -639,7 +639,7 @@
                         <td class="location-col d-none d-sm-table-cell">
                             <i class="bi bi-geo-alt text-muted me-1"></i>
                             <span class="badge bg-info bg-opacity-10 text-info border">
-                                {{ item.location.name|default:"No Location" }}
+                                {% if item.location %}{{ item.location.name }}{% else %}No Location{% endif %}
                             </span>
                         </td>
                         <td class="status-col">

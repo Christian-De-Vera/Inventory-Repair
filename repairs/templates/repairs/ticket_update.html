@@ -55,7 +55,7 @@
                                     <select name="assigned_to" id="assigned_to" class="form-select">
                                         <option value="">-- Unassigned --</option>
                                         {% for person in persons %}
-                                        <option value="{{ person.id }}" {% if ticket.assigned_to.id == person.id %}selected{% endif %}>{{ person.name }}</option>
+                                        <option value="{{ person.id }}" {% if ticket.assigned_to and ticket.assigned_to.id == person.id %}selected{% endif %}>{{ person.name }}</option>
                                         {% endfor %}
                                     </select>
                                     <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#addPersonModal" title="Quick Add Person">

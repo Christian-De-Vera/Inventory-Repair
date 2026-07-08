@@ -273,8 +273,8 @@
                             {% if item.id %}
                             <tr>
                                 <td><a href="{% url 'item_detail' item.id %}">{{ item.name }}</a></td>
-                                <td>{{ item.category.name|default:"—" }}</td>
-                                <td>{{ item.location.name|default:"—" }}</td>
+                                <td>{% if item.category %}{{ item.category.name }}{% else %}—{% endif %}</td>
+                                <td>{% if item.location %}{{ item.location.name }}{% else %}—{% endif %}</td>
                                 <td>{{ item.created_at|date:"Y-m-d H:i" }}</td>
                             </tr>
                             {% endif %}
