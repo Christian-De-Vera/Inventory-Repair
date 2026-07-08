@@ -14,11 +14,15 @@ from django.core.files.base import ContentFile
 from django.conf import settings
 import csv
 import json
+import logging
 import os
+import time
 from datetime import date, timedelta
 from .forms import ItemForm
 from repairs.models import RepairTicket
 from .models import Item, Category, Department, Location, Person, CustomField, CustomFieldValue
+
+logger = logging.getLogger(__name__)
 
 
 def service_worker(request):
@@ -35,6 +39,7 @@ def manifest(request):
 
 @permission_required('inventory.view_item', raise_exception=True)
 def dashboard(request):
+    _start = time.monotonic()
     # Total items (count of records)
     total_items = Item.objects.count()
     active_items = Item.objects.filter(status='available')
@@ -225,6 +230,7 @@ def dashboard(request):
         'recent_items': recent_items,
         'nav_section': 'dashboard',
     }
+    logger.warning('dashboard rendered in %.2fs', time.monotonic() - _start)
     return render(request, 'inventory/dashboard.html', context)
 
 @permission_required('inventory.delete_item', raise_exception=True)
