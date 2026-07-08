@@ -33,4 +33,4 @@ def start_keepalive_thread(interval=None):
     thread = threading.Thread(target=_keepalive_loop, args=(interval,), daemon=True)
     thread.name = "db-keepalive"
     thread.start()
-    logger.info("Started DB keep-alive thread (interval=%ss)", interval)
+    logger.warning("Started DB keep-alive thread (interval=%ss)", interval)
