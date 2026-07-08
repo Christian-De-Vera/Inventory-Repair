@@ -191,7 +191,7 @@
             <div class="resizable-chart-wrapper shadow-sm overflow-hidden">
                 <div class="card resizable-chart-card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 id="mainChartCardTitle" class="mb-0 fw-bold">Ticket Distribution</h5>
+                        <h6 id="mainChartCardTitle" class="mb-0 fw-bold">Ticket Distribution</h6>
                         <div class="chart-controls d-flex gap-2">
                             <select id="chartTypeSelect" class="form-select form-select-sm">
                                 <option value="status">by Status</option>
@@ -222,7 +222,7 @@
                             </div>
                             <h6 class="fw-bold mb-0">Overdue Repairs</h6>
                         </div>
-                        <h2 class="fw-bold">{{ overdue_tickets.count|default:0 }}</h2>
+                        <div class="fw-bold display-6">{{ overdue_tickets.count|default:0 }}</div>
                         <p class="text-muted small">Tickets past expected completion date.</p>
                     </div>
                 </div>
@@ -234,7 +234,7 @@
                             </div>
                             <h6 class="fw-bold mb-0">Upcoming (30 Days)</h6>
                         </div>
-                        <h2 class="fw-bold">{{ upcoming_tickets.count|default:0 }}</h2>
+                        <div class="fw-bold display-6">{{ upcoming_tickets.count|default:0 }}</div>
                         <p class="text-muted small">Tickets due for completion soon.</p>
                     </div>
                 </div>
@@ -247,7 +247,7 @@
         <div class="col-lg-6">
             <div class="card border-0 shadow-sm rounded-4 h-100">
                 <div class="card-header bg-white border-bottom py-3">
-                    <h6 class="mb-0 fw-bold text-warning"><i class="bi bi-exclamation-octagon me-2"></i>Overdue Tickets</h6>
+                    <h6 class="mb-0 fw-bold" style="color: #664d03;"><i class="bi bi-exclamation-octagon me-2"></i>Overdue Tickets</h6>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
