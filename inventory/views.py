@@ -40,6 +40,8 @@ def manifest(request):
 @permission_required('inventory.view_item', raise_exception=True)
 def dashboard(request):
     _start = time.monotonic()
+    from django.db import connection as _conn
+    _conn.queries_log.clear()
     # Total items (count of records)
     total_items = Item.objects.count()
     active_items = Item.objects.filter(status='available')
@@ -230,7 +232,7 @@ def dashboard(request):
         'recent_items': recent_items,
         'nav_section': 'dashboard',
     }
-    logger.warning('dashboard rendered in %.2fs', time.monotonic() - _start)
+    logger.warning('dashboard rendered in %.2fs (queries=%d)', time.monotonic() - _start, len(_conn.queries))
     return render(request, 'inventory/dashboard.html', context)
 
 @permission_required('inventory.delete_item', raise_exception=True)
