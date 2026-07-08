@@ -18,7 +18,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p10hpo7hd!cny_9m@8hnk&&zz%$j!!t#7f#-*e'))
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = ['*']  # Accept any host header for multi-platform deployment
+ALLOWED_HOSTS = ['labeqp.uipmainccs.cloud', 'www.labeqp.uipmainccs.cloud', 'localhost', '127.0.0.1']
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
@@ -158,7 +158,7 @@ STORAGES = {
 }
 
 # CSRF settings for hosted platforms
-CSRF_TRUSTED_ORIGINS = ['https://*.railway.app', 'https://*.onrender.com', 'https://*.fly.dev']
+CSRF_TRUSTED_ORIGINS = ['https://labeqp.uipmainccs.cloud', 'https://www.labeqp.uipmainccs.cloud']
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
 
