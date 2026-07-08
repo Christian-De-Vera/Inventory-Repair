@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from django.conf import settings
 import csv
 import json
 import os
@@ -18,6 +19,19 @@ from datetime import date, timedelta
 from .forms import ItemForm
 from repairs.models import RepairTicket
 from .models import Item, Category, Department, Location, Person, CustomField, CustomFieldValue
+
+
+def service_worker(request):
+    sw_path = os.path.join(settings.BASE_DIR, 'inventory', 'static', 'pwa', 'sw.js')
+    with open(sw_path, 'r', encoding='utf-8') as f:
+        return HttpResponse(f.read(), content_type='application/javascript')
+
+
+def manifest(request):
+    manifest_path = os.path.join(settings.BASE_DIR, 'inventory', 'static', 'pwa', 'manifest.webmanifest')
+    with open(manifest_path, 'r', encoding='utf-8') as f:
+        return HttpResponse(f.read(), content_type='application/manifest+json')
+
 
 @permission_required('inventory.view_item', raise_exception=True)
 def dashboard(request):

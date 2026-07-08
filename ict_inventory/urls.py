@@ -29,6 +29,8 @@ urlpatterns = [
     path('inventory/hierarchy/<int:id>/', inventory_views.item_hierarchy, name='item_hierarchy'),
     path('repairs/', include('repairs.urls')),
     path('notifications/', include('notifications.urls')),
+    path('sw.js', inventory_views.service_worker, name='service_worker'),
+    path('manifest.webmanifest', inventory_views.manifest, name='manifest'),
 ]
 
 if settings.DEBUG:
