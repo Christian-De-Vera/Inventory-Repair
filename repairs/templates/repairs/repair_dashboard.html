@@ -86,8 +86,20 @@
     .badge.bg-primary { background-color: var(--dash-primary) !important; }
     .border-primary { border-color: var(--dash-primary) !important; }
 </style>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 {% endblock %}
+{% block extra_js %}
+<script>
+    window.chartJsLoaded = window.chartJsLoaded || new Promise((resolve) => {
+        if (typeof Chart !== 'undefined') { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        s.onload = resolve;
+        document.head.appendChild(s);
+    });
+</script>
+<script>
+    window.chartJsLoaded.then(function() {
+        (function() {
 
 {% block content %}
 <div class="mt-2">
@@ -390,6 +402,7 @@
         chartStyleSelect?.addEventListener('change', refreshChart);
 
         renderMainChart('status', 'doughnut');
-    })();
+        })();
+    });
 </script>
 {% endblock %}

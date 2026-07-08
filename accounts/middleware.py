@@ -23,5 +23,7 @@ class LoginRequiredMiddleware:
             '/admin/',
             settings.STATIC_URL,
             settings.MEDIA_URL,
+            '/manifest.webmanifest',
+            '/sw.js',
         ]
         return any(path.startswith(prefix) for prefix in public_prefixes if prefix)

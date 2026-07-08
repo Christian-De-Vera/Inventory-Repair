@@ -350,9 +350,18 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-    (function() {
+    window.chartJsLoaded = window.chartJsLoaded || new Promise((resolve) => {
+        if (typeof Chart !== 'undefined') { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+        s.onload = resolve;
+        document.head.appendChild(s);
+    });
+</script>
+<script>
+    window.chartJsLoaded.then(function() {
+        (function() {
         // Handle items modal
         const itemsModal = document.getElementById('itemsModal');
         const itemsModalTitle = document.getElementById('itemsModalTitle');
@@ -674,6 +683,7 @@
         } else {
             initChart();
         }
-    })();
+        })();
+    });
 </script>
 {% endblock %}
