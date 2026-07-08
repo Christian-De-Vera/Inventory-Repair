@@ -14,13 +14,13 @@ import os
 import re
 from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+
 try:
     from dotenv import load_dotenv
     load_dotenv(BASE_DIR / '.env')
-except ImportError:
+except Exception:
     pass
-
-BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY', os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-pqdstm(b-^i2p10hpo7hd!cny_9m@8hnk&&zz%$j!!t#7f#-*e'))
 DEBUG = os.environ.get('DJANGO_DEBUG', 'False') == 'True'
