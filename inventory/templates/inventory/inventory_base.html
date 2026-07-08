@@ -267,7 +267,7 @@
 <body class="min-vh-100">
     
     <!-- Global page loading overlay -->
-    <div id="page-loader" role="status" aria-live="polite">
+    <div id="page-loader" class="show" role="status" aria-live="polite">
         <div class="text-center">
             <div class="page-loader-spinner"></div>
             <div class="mt-3 fw-semibold text-primary">Loading…</div>
@@ -755,6 +755,7 @@ const unreadIds = Array.from(document.querySelectorAll('[data-notification-id]')
 
             window.addEventListener('load', hideLoader);
             window.addEventListener('pageshow', hideLoader);
+            document.addEventListener('DOMContentLoaded', hideLoader);
 
             // Show on internal link clicks (full page navigation)
             document.addEventListener('click', function (e) {
