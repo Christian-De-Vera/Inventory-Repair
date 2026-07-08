@@ -54,6 +54,8 @@ if DATABASE_URL:
                 'PASSWORD': match.group(2),
                 'HOST': match.group(3),
                 'PORT': match.group(4) or '5432',
+                'CONN_MAX_AGE': 300,
+                'CONN_HEALTH_CHECKS': True,
             }
         }
         if query_params:
@@ -65,6 +67,8 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
             'NAME': BASE_DIR / 'db.sqlite3',
+            'CONN_MAX_AGE': 300,
+            'CONN_HEALTH_CHECKS': True,
         }
     }
 

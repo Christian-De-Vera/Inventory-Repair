@@ -47,11 +47,14 @@ def dashboard(request):
         )
     )['total']
 
-    # Items by status (for pie chart)
+    # Items by status (for pie chart) - single grouped query
+    status_counts = dict(
+        Item.objects.values('status').annotate(c=Count('id')).values_list('status', 'c')
+    )
     status_labels = []
     status_data = []
     for code, label in Item.STATUS_CHOICES:
-        count = Item.objects.filter(status=code).count()
+        count = status_counts.get(code, 0)
         if count > 0:
             status_labels.append(label)
             status_data.append(count)
@@ -116,26 +119,48 @@ def dashboard(request):
             'status': item.get_status_display(),
         }
 
-    status_items = {
-        label: [serialize_item(item) for item in Item.objects.filter(status=code).select_related('category', 'location', 'person_accountable')]
-        for code, label in Item.STATUS_CHOICES
-    }
-    category_items = {
-        cat.name: [serialize_item(item) for item in Item.objects.filter(category=cat).select_related('category', 'location', 'person_accountable')]
-        for cat in Category.objects.filter(name__in=category_labels)
-    }
-    location_items = {
-        loc.name: [serialize_item(item) for item in Item.objects.filter(location=loc).select_related('category', 'location', 'person_accountable')]
-        for loc in Location.objects.filter(name__in=location_labels)
-    }
-    person_items = {
-        person.name: [serialize_item(item) for item in Item.objects.filter(person_accountable=person).select_related('category', 'location', 'person_accountable')]
-        for person in Person.objects.filter(name__in=person_labels)
-    }
-    department_items = {
-        dept: [serialize_item(item) for item in Item.objects.filter(department__name=None if dept == 'No Department' else dept).select_related('category', 'location', 'person_accountable')]
-        for dept in department_labels
-    }
+    # Drill-down item lists - fetched in bulk (one query per dimension) and
+    # grouped in Python to avoid the previous N+1 query explosion. The
+    # resulting context variables are identical to the prior implementation.
+    status_items = {label: [] for _, label in Item.STATUS_CHOICES}
+    for item in Item.objects.filter(
+        status__in=[code for code, _ in Item.STATUS_CHOICES]
+    ).select_related('category', 'location', 'person_accountable'):
+        status_items[item.get_status_display()].append(serialize_item(item))
+
+    category_items = {name: [] for name in category_labels}
+    if category_labels:
+        for item in Item.objects.filter(
+            category__name__in=category_labels
+        ).select_related('category', 'location', 'person_accountable'):
+            category_items[item.category.name].append(serialize_item(item))
+
+    location_items = {name: [] for name in location_labels}
+    if location_labels:
+        for item in Item.objects.filter(
+            location__name__in=location_labels
+        ).select_related('category', 'location', 'person_accountable'):
+            location_items[item.location.name].append(serialize_item(item))
+
+    person_items = {name: [] for name in person_labels}
+    if person_labels:
+        for item in Item.objects.filter(
+            person_accountable__name__in=person_labels
+        ).select_related('category', 'location', 'person_accountable'):
+            person_items[item.person_accountable.name].append(serialize_item(item))
+
+    department_items = {dept: [] for dept in department_labels}
+    dept_names = [d for d in department_labels if d != 'No Department']
+    dept_filter = Q(department__name__in=dept_names)
+    if 'No Department' in department_labels:
+        dept_filter |= Q(department__isnull=True)
+    if department_labels:
+        for item in Item.objects.filter(dept_filter).select_related(
+            'category', 'location', 'person_accountable', 'department'
+        ):
+            key = item.department.name if item.department else 'No Department'
+            if key in department_items:
+                department_items[key].append(serialize_item(item))
 
     status_label_to_code = {label: code for code, label in Item.STATUS_CHOICES}
     category_label_to_id = {cat.name: cat.id for cat in Category.objects.filter(name__in=category_labels)}
