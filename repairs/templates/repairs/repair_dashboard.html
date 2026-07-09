@@ -311,9 +311,7 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
 <script>
     (function() {
         const statusLabels = JSON.parse('{{ status_labels|escapejs }}');
@@ -405,4 +403,5 @@
         })();
     });
 </script>
+{% endblock %}
 {% endblock %}
