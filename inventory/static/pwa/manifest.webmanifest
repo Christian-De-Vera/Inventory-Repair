@@ -1,11 +1,15 @@
 {
+  "id": "/",
   "name": "ICT Inventory & Repair Tracker",
   "short_name": "ICT System",
+  "description": "Lab Equipment Inventory and Repair Service Tracker",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#f8f9fa",
   "theme_color": "#0d6efd",
-  "description": "Lab Equipment Inventory and Repair Service Tracker",
+  "lang": "en-US",
   "icons": [
     {
       "src": "/static/pwa/icon-192.png",
@@ -16,6 +20,12 @@
       "src": "/static/pwa/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/static/pwa/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
