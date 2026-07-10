@@ -8,7 +8,6 @@
     .role-badge-supply { background-color: #198754; }
     .role-badge-mis { background-color: #0d6efd; }
     .role-badge-accountable { background-color: #6f42c1; }
-    .role-badge-custom { background-color: #6c757d; }
 </style>
 {% endblock %}
 
@@ -40,9 +39,6 @@
                         <td>{{ user_obj.get_full_name|default:'-' }}</td>
                         <td>{{ user_obj.email|default:'-' }}</td>
                         <td>
-                            {% if user_obj.is_custom_role %}
-                                <span class="badge role-badge-custom me-1">Custom</span>
-                            {% endif %}
                             {% for group in user_obj.groups.all %}
                                 {% if group.name == 'Admin' %}
                                     <span class="badge role-badge-admin me-1">{{ group.name }}</span>

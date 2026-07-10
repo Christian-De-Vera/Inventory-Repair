@@ -344,7 +344,7 @@
         </ul>
         
         <hr class="text-white-50">
-        {% if perms.repairs.view_repairticket %}
+        {% if request.repair_access_allowed %}
         <div class="module-switch-container mt-auto mb-2 px-3">
             <a class="module-switch-btn d-flex align-items-center justify-content-between text-decoration-none" href="{% url 'repairs:ticket_list' %}" title="Switch to Repair Module">
                 <div class="d-flex align-items-center">

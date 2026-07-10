@@ -305,7 +305,7 @@
         </ul>
         
         <hr class="text-white-50">
-        {% if perms.inventory.view_item %}
+        {% if perms.inventory.view_item and not request.is_mis_only %}
         <div class="module-switch-container mt-auto mb-2 px-3">
             <a class="module-switch-btn d-flex align-items-center justify-content-between text-decoration-none" href="{% url 'dashboard' %}" title="Switch to Inventory Module">
                 <div class="d-flex align-items-center">

@@ -8,5 +8,5 @@ class AccountsConfig(AppConfig):
 
     def ready(self):
         from .roles import ensure_default_roles
-
+        from . import signals
         post_migrate.connect(ensure_default_roles)

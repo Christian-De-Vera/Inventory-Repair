@@ -1,0 +1,36 @@
+{% extends 'inventory/inventory_base.html' %}
+
+{% block title %}Pending Approval{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pending-panel {
+        max-width: 520px;
+        margin: 3rem auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pending-panel">
+    <div class="card shadow-sm border-0 rounded-4 text-center">
+        <div class="card-body p-5">
+            <div class="display-1 text-warning mb-3"><i class="bi bi-hourglass-split"></i></div>
+            <h2 class="fw-bold mb-3">Account Pending Approval</h2>
+            <p class="text-muted mb-4">
+                Your account has been created successfully, but it requires administrator approval before you can access the system.
+            </p>
+            <p class="small text-muted">
+                Please wait while an admin reviews your registration and grants you the appropriate permissions.
+            </p>
+            <hr>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger mt-2">
+                    <i class="bi bi-box-arrow-right me-1"></i> Logout
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -8,6 +8,7 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='accounts/login.html', redirect_authenticated_user=True), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('register/', views.register, name='register'),
+    path('pending/', views.pending_approval, name='pending_approval'),
     path('users/', views.user_list, name='account_user_list'),
     path('users/<int:pk>/roles/', views.user_roles_edit, name='account_user_roles'),
     path('users/<int:pk>/delete/', views.user_delete, name='account_user_delete'),
